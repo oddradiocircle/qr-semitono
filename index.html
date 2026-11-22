@@ -374,11 +374,11 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
         <div class="ctl">
           <div class="ctl-head"><span class="lbl" id="readLbl">Facilidad de lectura</span><output id="readOut"></output></div>
           <div class="seg three" role="radiogroup" aria-labelledby="readLbl">
-            <input type="radio" name="read" id="rdImg" value="img"><label for="rdImg">Más imagen</label>
-            <input type="radio" name="read" id="rdBal" value="bal" checked><label for="rdBal">Equilibrada</label>
+            <input type="radio" name="read" id="rdImg" value="img" checked><label for="rdImg">Más imagen</label>
+            <input type="radio" name="read" id="rdBal" value="bal"><label for="rdBal">Equilibrada</label>
             <input type="radio" name="read" id="rdRead" value="read"><label for="rdRead">Más lectura</label>
           </div>
-          <p class="hint">Cambia el tamaño del centro de cada cuadro, que es la parte que lee el teléfono. Con un centro más grande, la cámara lee más fácil, pero la imagen pierde detalle. Si a la cámara le cuesta leer el código, súbela.</p>
+          <p class="hint">Cambia el tamaño del centro de cada cuadro, que es la parte que lee el teléfono. Con un centro más grande, la cámara lee más fácil, pero la imagen pierde detalle y se ven cuadros más grandes. Empieza con “Más imagen” y sube solo si a la cámara le cuesta leer el código.</p>
         </div>
         <div class="ctl">
           <div class="ctl-head"><span class="lbl" id="eccLbl">Protección contra daños</span><output id="eccOut"></output></div>
@@ -953,7 +953,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     $('progTxt').textContent = 'Esta es una vista previa. Crea el GIF para revisar cada cuadro y descargarlo.';
     updateSaveButton();
   }
-  const gifScale = (ctx, st) => { const s1 = Math.max(2, Math.round(600 / ctx.T)); return st.gsize === 4 ? Math.max(s1 + 1, Math.round(800 / ctx.T)) : s1; };
+  const gifScale = (ctx, st) => { const s1 = Math.max(2, Math.ceil(560 / ctx.T)); return st.gsize === 4 ? Math.max(s1 + 1, Math.round(800 / ctx.T)) : s1; };
   function videoFacts(ctx, st, seq, extra = []) {
     const px = ctx.T * gifScale(ctx, st);
     $('gsizeOut').textContent = `${px} × ${px} px`;
@@ -1191,7 +1191,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     $('zoom').value = DEFAULTS.zoom; $('posX').value = DEFAULTS.posX; $('posY').value = DEFAULTS.posY;
     $('bright').value = DEFAULTS.bright; $('contrast').value = DEFAULTS.contrast; $('mid').value = DEFAULTS.mid;
     $('ecc' + DEFAULTS.ecc).checked = true; $('minVer').value = DEFAULTS.minVer; $('flip').value = DEFAULTS.flip;
-    $('vStart').value = 0; $('vDur').value = Math.min(3, +$('vDur').max); $('fps10').checked = true; $('dmFixed').checked = true; $('gs3').checked = true; $('lpFade').checked = true; $('rdBal').checked = true;
+    $('vStart').value = 0; $('vDur').value = Math.min(3, +$('vDur').max); $('fps10').checked = true; $('dmFixed').checked = true; $('gs3').checked = true; $('lpFade').checked = true; $('rdImg').checked = true;
     schedule();
   });
   $('btnCenter').addEventListener('click', () => { $('posX').value = 0; $('posY').value = 0; schedule(); });

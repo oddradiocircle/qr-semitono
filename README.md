@@ -28,11 +28,11 @@ Un lector de QR mira solo el centro de cada cuadro del código. La página divid
 
 | Opción | Puntos por cuadro | Puntos del centro | Parte del cuadro que guarda el dato |
 |---|---|---|---|
-| Más imagen | 3 × 3 | 1 | 11 % |
-| Equilibrada (inicial) | 4 × 4 | 2 × 2 | 25 % |
+| Más imagen (inicial) | 3 × 3 | 1 | 11 % |
+| Equilibrada | 4 × 4 | 2 × 2 | 25 % |
 | Más lectura | 5 × 5 | 3 × 3 | 36 % |
 
-Con un centro más grande, la cámara lee más fácil, pero la imagen pierde detalle.
+Con un centro más grande, la cámara lee más fácil, pero la imagen pierde detalle y se ven cuadros más grandes. Conviene empezar con "Más imagen" y subir solo si la cámara tiene problemas.
 
 Con "Prioridad a la imagen" mayor que 0 %, algunos centros pasan a la imagen. La corrección de errores del QR repara esos datos. Con la imagen de ejemplo y protección máxima, el código se leyó hasta con 6 % (prueba en navegador automático, 2026-11-07).
 
@@ -51,7 +51,7 @@ Cada cuadro del GIF es un código QR con los mismos datos. Los puntos centrales 
 - **Revisión:** al crear el GIF, la página prueba cada cuadro con el lector, nítido y un poco borroso, y dice cuántos se leen.
 - **Formato:** GIF de 2 colores. El codificador está escrito en la página; no usa librerías externas.
 
-Prueba en navegador automático (2026-11-22, facilidad de lectura equilibrada, 3 segundos, 10 cuadros por segundo): con el video de ejemplo y con 2 videos MP4, se leyeron todos los cuadros con las 3 formas de repetir. Con un video de movimiento continuo, el salto al volver al inicio fue de 26,8 con "Corte", 2,3 con "Fundido" y 1,1 con "Ida y vuelta". El cambio normal entre cuadros seguidos fue de 1,8. La escala es la diferencia media de gris entre cuadros, de 0 a 255. Los GIF pesaron entre 371 y 471 KB, o entre 718 y 910 KB con "Ida y vuelta" (520 × 520 píxeles).
+Prueba en navegador automático (2026-11-22, facilidad de lectura "Equilibrada", 3 segundos, 10 cuadros por segundo): con el video de ejemplo y con 2 videos MP4, se leyeron todos los cuadros con las 3 formas de repetir. Con un video de movimiento continuo, el salto al volver al inicio fue de 26,8 con "Corte", 2,3 con "Fundido" y 1,1 con "Ida y vuelta". El cambio normal entre cuadros seguidos fue de 1,8. La escala es la diferencia media de gris entre cuadros, de 0 a 255. Los GIF pesaron entre 371 y 471 KB, o entre 718 y 910 KB con "Ida y vuelta" (520 × 520 píxeles).
 
 Riesgo conocido: Instagram, WhatsApp y otras apps vuelven a comprimir los videos y los GIF. Esa compresión puede borrar los puntos finos y dañar la lectura. Pruébalo después de subirlo.
 
