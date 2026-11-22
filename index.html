@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Crea códigos QR con una imagen en trama de puntos que se siguen pudiendo escanear.">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>QR en semitono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+</head>
+<body>
+<style>
+/* Layout: móvil primero, una columna en pasos (texto, imagen, resultado, ajustes). En pantalla ancha, el resultado queda fijo a la derecha. */
+:root {
+  --paper: #f2f4f6;
+  --sheet: #ffffff;
+  --ink: #15181c;
+  --ink-soft: #545d68;
+  --rule: #d3d9e0;
+  --accent: #b8006a;
+  --accent-soft: #fbe3ef;
+  --ok: #1a7343;
+  --ok-bg: #e2f2e8;
+  --warn: #8a5a00;
+  --warn-bg: #fdf1d6;
+  --bad: #ad2a1f;
+  --bad-bg: #fbe6e3;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111418; --sheet: #1a1e24; --ink: #e9ecf0; --ink-soft: #a3adb8; --rule: #2e353e;
+    --accent: #ff6ab4; --accent-soft: #3a1a2b; --ok: #74d9a0; --ok-bg: #15301f; --warn: #f2c25c; --warn-bg: #352a12;
+    --bad: #ff9187; --bad-bg: #3a1a18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111418; --sheet: #1a1e24; --ink: #e9ecf0; --ink-soft: #a3adb8; --rule: #2e353e;
+  --accent: #ff6ab4; --accent-soft: #3a1a2b; --ok: #74d9a0; --ok-bg: #15301f; --warn: #f2c25c; --warn-bg: #352a12;
+  --bad: #ff9187; --bad-bg: #3a1a18; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(30px, 7vw, 48px); line-height: 1.05; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+.lede { margin: 8px 0 0; color: var(--ink-soft); max-width: 60ch; }
+
+.app {
+  display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "text" "image" "result" "settings";
+}
+@media (min-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-areas: "text result" "image result" "settings result"; align-items: start; column-gap: 24px; }
+  .result { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+}
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.step { display: flex; gap: 10px; align-items: center; margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 20px; line-height: 1.2; }
+.step .n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--sheet); font: 600 15px/28px var(--f-body); text-align: center; }
+.hint { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.text-area { grid-area: text; } .image-area { grid-area: image; } .result { grid-area: result; } .settings { grid-area: settings; }
+
+textarea {
+  width: 100%; font: 16px/1.4 var(--f-body); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 8px; padding: 12px; resize: vertical; min-height: 72px;
+}
+textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.count { font-variant-numeric: tabular-nums; }
+
+/* Tipo de código */
+.types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 480px) { .types { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.types input { position: absolute; opacity: 0; pointer-events: none; }
+.types label { min-height: 48px; display: grid; place-content: center; text-align: center; padding: 6px 4px; border: 1.5px solid var(--rule); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; line-height: 1.2; }
+.types input:checked + label { border-color: var(--accent); background: var(--accent-soft); }
+.types input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tform { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tform[hidden] { display: none !important; }
+.tform > * { grid-column: 1 / -1; }
+.tform > .half { grid-column: auto; }
+@media (max-width: 380px) { .tform > .half { grid-column: 1 / -1; } }
+.f { display: grid; gap: 4px; min-width: 0; }
+.f > label { font-weight: 600; font-size: 15px; }
+.f input[type="text"], .f input[type="url"], .f input[type="tel"], .f input[type="email"], .f input[type="datetime-local"], .f select {
+  width: 100%; min-height: 46px; font: 16px/1.3 var(--f-body); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px;
+}
+.f input:focus-visible, .f select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.checkline { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 15px; cursor: pointer; }
+.checkline input { width: 20px; height: 20px; accent-color: var(--accent); }
+.type-help { margin: 0; font-size: 15px; padding: 10px 12px; border-radius: 8px; background: var(--paper); }
+.payload summary { font-size: 14px; color: var(--ink-soft); cursor: pointer; padding: 6px 0; min-height: 0; font-weight: 500; }
+.payload { border: 0; padding: 0; background: none; }
+.payload pre { margin: 6px 0 0; padding: 10px 12px; background: var(--paper); border-radius: 8px; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+
+/* Imagen */
+.pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.btn {
+  min-height: 48px; padding: 10px 14px; border-radius: 8px; cursor: pointer;
+  font: 600 16px var(--f-body); display: inline-flex; gap: 8px; align-items: center; justify-content: center;
+  border: 1.5px solid var(--ink); background: var(--sheet); color: var(--ink);
+}
+.btn.primary { background: var(--ink); color: var(--sheet); }
+.btn svg { width: 20px; height: 20px; flex: none; }
+.btn:focus-visible, .linkbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) { .btn:hover { background: var(--ink); color: var(--sheet); } .btn.primary:hover { opacity: .88; } }
+.touch-only { display: none !important; }
+@media (pointer: coarse) { .touch-only { display: inline-flex !important; } .desk-only { display: none !important; } }
+.current { display: flex; gap: 12px; align-items: center; }
+.current canvas { width: 56px; height: 56px; border-radius: 6px; flex: none; border: 1px solid var(--rule); }
+.current p { margin: 0; font-size: 14px; color: var(--ink-soft); min-width: 0; }
+.current b { color: var(--ink); font-weight: 600; display: block; font-size: 15px; overflow-wrap: anywhere; }
+.linkbtn { background: none; border: 0; padding: 4px 0; min-height: 44px; color: var(--ink); font: 500 15px var(--f-body); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; cursor: pointer; }
+.drop-over { outline: 2px dashed var(--accent); outline-offset: 4px; }
+
+/* Resultado */
+#out { width: 100%; aspect-ratio: 1; image-rendering: pixelated; display: block; border-radius: 6px; background: #fff; }
+.verdict { border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; }
+.verdict .icon { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 16px; color: var(--sheet); }
+.verdict p { margin: 0; font-size: 15px; }
+.verdict p + p { margin-top: 4px; font-size: 14px; }
+.verdict.ok { background: var(--ok-bg); color: var(--ok); } .verdict.ok .icon { background: var(--ok); }
+.verdict.warn { background: var(--warn-bg); color: var(--warn); } .verdict.warn .icon { background: var(--warn); }
+.verdict.bad { background: var(--bad-bg); color: var(--bad); } .verdict.bad .icon { background: var(--bad); }
+.verdict strong { font-weight: 600; }
+.save-row { display: grid; gap: 8px; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--ink-soft); margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+.facts b { color: var(--ink); font-weight: 600; }
+
+/* Ajustes */
+.group { display: grid; gap: 18px; padding-top: 4px; }
+.group + .group { border-top: 1px solid var(--rule); padding-top: 18px; }
+.group h3 { margin: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.ctl { display: grid; gap: 4px; }
+.ctl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ctl-head label, .ctl-head .lbl { font-weight: 600; font-size: 16px; }
+.ctl-head output { font-variant-numeric: tabular-nums; font-size: 15px; color: var(--accent); font-weight: 600; }
+.ctl .hint { margin-top: 2px; }
+.ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); margin-top: -4px; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; margin: 0; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--rule); }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--rule); }
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--accent); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); border: 3px solid var(--sheet); box-shadow: 0 0 0 1px var(--accent); margin-top: -10px; }
+input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid var(--sheet); box-shadow: 0 0 0 1px var(--accent); }
+input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { min-height: 52px; display: grid; place-content: center; text-align: center; padding: 6px 2px; border: 1.5px solid var(--rule); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; line-height: 1.2; }
+.seg label small { font-weight: 400; font-size: 13px; color: var(--ink-soft); }
+.seg input:checked + label { border-color: var(--accent); background: var(--accent-soft); }
+.seg input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+details { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 0 18px; }
+summary { cursor: pointer; padding: 14px 0; font-weight: 600; font-size: 17px; min-height: 48px; }
+summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.how { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; padding-bottom: 18px; align-items: start; }
+@media (max-width: 560px) { .how { grid-template-columns: minmax(0, 1fr); } }
+.how p { margin: 0 0 10px; max-width: 62ch; font-size: 15px; }
+.how a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.cell-ink { fill: var(--ink); } .cell-paper { fill: var(--sheet); stroke: var(--rule); } .cell-mag { fill: var(--accent); }
+.how figure { margin: 0; }
+.how figcaption { font-size: 13px; color: var(--ink-soft); max-width: 18ch; margin-top: 6px; }
+
+/* Vista previa flotante en móvil */
+.mini {
+  position: fixed; z-index: 20;
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  width: 100px; padding: 6px; border-radius: 10px; border: 1px solid var(--rule); background: var(--sheet);
+  box-shadow: 0 6px 24px rgba(0,0,0,.18); cursor: pointer; display: grid; gap: 4px; justify-items: center;
+  font: 600 12px var(--f-body); color: var(--ink);
+}
+.mini img { width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 4px; background: #fff; }
+.mini .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.mini[hidden] { display: none !important; }
+@media (min-width: 900px) { .mini { display: none !important; } }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Tu imagen dentro de un código QR</h1>
+    <p class="lede">Elige qué hace el código: abrir una página, conectarse al wifi, guardar un contacto y más. Luego elige una imagen. La página crea un código QR que muestra tu imagen y que el teléfono puede seguir escaneando.</p>
+  </header>
+
+  <form class="app" id="controls" autocomplete="off">
+    <section class="card text-area" aria-labelledby="s1">
+      <h2 class="step" id="s1"><span class="n">1</span>¿Qué hace el código?</h2>
+      <div class="types" id="types" role="radiogroup" aria-label="Tipo de código"></div>
+      <p class="type-help" id="typeHelp"></p>
+      <div id="forms"></div>
+      <p class="hint"><span id="count" class="count"></span></p>
+      <details class="payload"><summary>Ver el contenido exacto que guarda el código</summary><pre id="payload"></pre></details>
+    </section>
+
+    <section class="card image-area" id="imageCard" aria-labelledby="s2">
+      <h2 class="step" id="s2"><span class="n">2</span>Elige la imagen</h2>
+      <div class="pick">
+        <button type="button" class="btn primary touch-only" id="btnCamera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Tomar foto
+        </button>
+        <button type="button" class="btn" id="btnUpload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
+          Cargar imagen
+        </button>
+      </div>
+      <input type="file" id="fileCamera" accept="image/*" capture="environment" class="sr" tabindex="-1" aria-hidden="true">
+      <input type="file" id="fileUpload" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+      <div class="current">
+        <canvas id="thumb" width="112" height="112" aria-hidden="true"></canvas>
+        <p><b id="imgName">Imagen de ejemplo</b><span id="imgNote">Funciona mejor con un solo objeto al centro y buen contraste.</span></p>
+      </div>
+      <p class="hint desk-only">También puedes arrastrar una imagen a este recuadro o pegarla con Ctrl+V (⌘+V en Mac).</p>
+      <div><button type="button" class="linkbtn" id="btnSample">Usar la imagen de ejemplo</button></div>
+    </section>
+
+    <section class="card result" id="resultCard" aria-labelledby="s3">
+      <h2 class="step" id="s3"><span class="n">3</span>Tu código</h2>
+      <img id="out" alt="Código QR con tu imagen">
+      <div id="verdict" class="verdict ok" role="status" aria-live="polite"></div>
+      <div class="save-row">
+        <button type="button" class="btn primary" id="btnSave" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+          Descargar imagen (PNG)
+        </button>
+        <p class="hint" id="saveHint">Para guardarla, mantén presionado el código (en el teléfono) o haz clic derecho y elige “Guardar imagen”.</p>
+        <p class="hint" id="saveMsg" role="status"></p>
+      </div>
+      <ul class="facts" id="facts"></ul>
+    </section>
+
+    <section class="card settings" aria-labelledby="s4">
+      <h2 class="step" id="s4"><span class="n">4</span>Ajusta el resultado</h2>
+      <p class="hint">Cada cambio se ve al instante en el código. Si el aviso se pone rojo, deshaz el último cambio.</p>
+
+      <div class="group">
+        <h3>La imagen</h3>
+        <div class="ctl">
+          <div class="ctl-head"><label for="zoom">Zoom</label><output id="zoomOut" for="zoom"></output></div>
+          <input type="range" id="zoom" min="50" max="400" step="5" value="100">
+          <div class="ends" aria-hidden="true"><span>Alejar</span><span>Acercar</span></div>
+          <p class="hint">100 % llena todo el código con la imagen. Más de 100 % acerca y recorta los bordes. Menos de 100 % muestra la imagen completa, con espacio blanco alrededor.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="posX">Posición horizontal</label><output id="posXOut" for="posX"></output></div>
+          <input type="range" id="posX" min="-100" max="100" step="1" value="0">
+          <div class="ends" aria-hidden="true"><span>Izquierda</span><span>Derecha</span></div>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="posY">Posición vertical</label><output id="posYOut" for="posY"></output></div>
+          <input type="range" id="posY" min="-100" max="100" step="1" value="0">
+          <div class="ends" aria-hidden="true"><span>Arriba</span><span>Abajo</span></div>
+          <p class="hint">Mueve la imagen dentro del código para dejar a la vista la parte que más te importa. 0 la deja centrada.</p>
+          <div><button type="button" class="linkbtn" id="btnCenter">Centrar la imagen</button></div>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="bright">Brillo</label><output id="brightOut" for="bright"></output></div>
+          <input type="range" id="bright" min="-50" max="50" step="1" value="0">
+          <div class="ends" aria-hidden="true"><span>Más oscura</span><span>Más clara</span></div>
+          <p class="hint">Aclara u oscurece toda la imagen. 0 la deja como está.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="contrast">Contraste</label><output id="contrastOut" for="contrast"></output></div>
+          <input type="range" id="contrast" min="50" max="250" step="5" value="120">
+          <div class="ends" aria-hidden="true"><span>Suave</span><span>Fuerte</span></div>
+          <p class="hint">100 % es el contraste original. Con más de 100 %, los claros se aclaran y los oscuros se oscurecen. Ayuda cuando la imagen se ve gris.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="mid">Tonos medios</label><output id="midOut" for="mid"></output></div>
+          <input type="range" id="mid" min="-50" max="50" step="1" value="0">
+          <div class="ends" aria-hidden="true"><span>Más oscuros</span><span>Más claros</span></div>
+          <p class="hint">Cambia solo los grises: no toca el blanco ni el negro. Sirve para ver mejor caras y sombras.</p>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>El código</h3>
+        <div class="ctl">
+          <div class="ctl-head"><span class="lbl" id="eccLbl">Protección contra daños</span><output id="eccOut"></output></div>
+          <div class="seg" role="radiogroup" aria-labelledby="eccLbl">
+            <input type="radio" name="ecc" id="eccL" value="L"><label for="eccL">Baja<small>7 %</small></label>
+            <input type="radio" name="ecc" id="eccM" value="M"><label for="eccM">Media<small>15 %</small></label>
+            <input type="radio" name="ecc" id="eccQ" value="Q" checked><label for="eccQ">Alta<small>25 %</small></label>
+            <input type="radio" name="ecc" id="eccH" value="H"><label for="eccH">Máxima<small>30 %</small></label>
+          </div>
+          <p class="hint">El porcentaje es la parte del código que puede dañarse, taparse o borrarse y aun así leerse. Más protección hace un código con más cuadros.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="minVer">Detalle</label><output id="verOut" for="minVer"></output></div>
+          <input type="range" id="minVer" min="1" max="30" step="1" value="10">
+          <div class="ends" aria-hidden="true"><span>Menos cuadros</span><span>Más cuadros</span></div>
+          <p class="hint" id="verHint">Es el número de cuadros del código. Más cuadros dan más detalle a la imagen, pero el código debe imprimirse más grande para que el teléfono lo lea.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="flip">Prioridad a la imagen</label><output id="flipOut" for="flip"></output></div>
+          <input type="range" id="flip" min="0" max="15" step="1" value="0">
+          <div class="ends" aria-hidden="true"><span>Más seguro</span><span>Más imagen</span></div>
+          <p class="hint">Con 0 %, ningún dato del código cambia. Con más de 0 %, ese porcentaje de cuadros muestra la imagen en lugar del dato, y la protección contra daños los repara. Si lo subes mucho, el código deja de leerse.</p>
+        </div>
+      </div>
+      <div><button type="button" class="btn" id="btnReset">Volver a los ajustes iniciales</button></div>
+    </section>
+  </form>
+
+  <details>
+    <summary>¿Cómo funciona?</summary>
+    <div class="how">
+      <div>
+        <p>El teléfono no mira cada cuadro del código completo. Solo mira su centro.</p>
+        <p>Esta página divide cada cuadro en 9 puntos. El punto del centro guarda el dato del código. Los 8 puntos de alrededor dibujan tu imagen con una trama de puntos, como la de un periódico.</p>
+        <p>Los 3 cuadros grandes de las esquinas y los cuadros pequeños de guía no cambian. El teléfono los usa para ubicar el código.</p>
+        <p>La página prueba cada código con un lector de QR, nítido y un poco borroso, como lo ve una cámara. Esa prueba no reemplaza a un teléfono real: escanea el código antes de imprimirlo.</p>
+        <p>Tu imagen no sale de tu equipo. Todo pasa en tu navegador.</p>
+        <p>La técnica es de Chu y otros, publicada en 2013 (<a href="https://doi.org/10.1145/2508363.2508408" target="_blank" rel="noopener">artículo</a>). La conocimos por <a href="https://hackaday.com/2026/11/06/using-halftone-images-in-qr-codes-without-upsetting-scanners/" target="_blank" rel="noopener">Hackaday (2026-11-06)</a>.</p>
+      </div>
+      <figure>
+        <svg width="120" height="120" viewBox="0 0 60 60" role="img" aria-label="Un cuadro del código dividido en 9 puntos, con el punto central resaltado">
+          <rect class="cell-paper" x="0.5" y="0.5" width="18" height="18"/><rect class="cell-ink" x="20" y="0" width="19" height="19"/><rect class="cell-paper" x="40.5" y="0.5" width="18" height="18"/>
+          <rect class="cell-ink" x="0" y="20" width="19" height="19"/><rect class="cell-mag" x="20" y="20" width="19" height="19"/><rect class="cell-paper" x="40.5" y="20.5" width="18" height="18"/>
+          <rect class="cell-paper" x="0.5" y="40.5" width="18" height="18"/><rect class="cell-ink" x="20" y="40" width="19" height="19"/><rect class="cell-ink" x="40" y="40" width="19" height="19"/>
+        </svg>
+        <figcaption>Un cuadro del código. En color, el punto que lee el teléfono.</figcaption>
+      </figure>
+    </div>
+  </details>
+</div>
+
+<button type="button" class="mini" id="mini" hidden aria-label="Ver tu código completo">
+  <img id="miniImg" alt="">
+  <span><span class="dot" id="miniDot"></span><span id="miniTxt">Se lee</span></span>
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+  const ALIGN = [null, [], [6,18], [6,22], [6,26], [6,30], [6,34], [6,22,38], [6,24,42], [6,26,46], [6,28,50],
+    [6,30,54], [6,32,58], [6,34,62], [6,26,46,66], [6,26,48,70], [6,26,50,74], [6,30,54,78], [6,30,56,82], [6,30,58,86], [6,34,62,90],
+    [6,28,50,72,94], [6,26,50,74,98], [6,30,54,78,102], [6,28,54,80,106], [6,32,58,84,110], [6,30,58,86,114], [6,34,62,90,118],
+    [6,26,50,74,98,122], [6,30,54,78,102,126], [6,26,52,78,104,130], [6,30,56,82,108,134], [6,34,60,86,112,138], [6,30,58,86,114,142],
+    [6,34,62,90,118,146], [6,30,54,78,102,126,150], [6,24,50,76,102,128,154], [6,28,54,80,106,132,158], [6,32,58,84,110,136,162],
+    [6,26,54,82,110,138,166], [6,30,58,86,114,142,170]];
+  const QUIET = 4, SUB = 3;
+  const ECC_NAME = { L: 'Baja', M: 'Media', Q: 'Alta', H: 'Máxima' };
+  const ECC_PCT = { L: 7, M: 15, Q: 25, H: 30 };
+  const DEFAULTS = { zoom: 100, posX: 0, posY: 0, bright: 0, contrast: 120, mid: 0, ecc: 'Q', minVer: 10, flip: 0 };
+  const SAMPLE_NOTE = 'Funciona mejor con un solo objeto al centro y buen contraste.';
+
+  // ---------- Imagen ----------
+  let srcCanvas = document.createElement('canvas');
+  function drawSample() {
+    const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d');
+    const bg = g.createLinearGradient(0, 0, 0, S); bg.addColorStop(0, '#f2f2f2'); bg.addColorStop(1, '#6a6a6a');
+    g.fillStyle = bg; g.fillRect(0, 0, S, S);
+    g.save(); g.translate(S*.5, S*.86); g.scale(1, .18);
+    const sh = g.createRadialGradient(0, 0, 0, 0, 0, S*.36); sh.addColorStop(0, 'rgba(0,0,0,.75)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = sh; g.beginPath(); g.arc(0, 0, S*.36, 0, Math.PI*2); g.fill(); g.restore();
+    const ring = front => {
+      g.save(); g.translate(S*.5, S*.47); g.rotate(-0.32); g.scale(1, .28);
+      const a0 = front ? 0 : Math.PI, a1 = front ? Math.PI : Math.PI*2;
+      g.lineWidth = 34; g.strokeStyle = '#2b2b2b'; g.beginPath(); g.arc(0, 0, S*.41, a0, a1); g.stroke();
+      g.lineWidth = 10; g.strokeStyle = '#bdbdbd'; g.beginPath(); g.arc(0, 0, S*.41, a0, a1); g.stroke();
+      g.restore();
+    };
+    ring(false);
+    const sp = g.createRadialGradient(S*.38, S*.33, S*.02, S*.5, S*.47, S*.27);
+    sp.addColorStop(0, '#ffffff'); sp.addColorStop(.35, '#b9b9b9'); sp.addColorStop(.8, '#3a3a3a'); sp.addColorStop(1, '#141414');
+    g.fillStyle = sp; g.beginPath(); g.arc(S*.5, S*.47, S*.27, 0, Math.PI*2); g.fill();
+    ring(true);
+    g.fillStyle = '#ffffff';
+    [[.12,.12,5],[.84,.16,7],[.9,.42,4],[.1,.5,4],[.2,.28,3],[.78,.08,3]].forEach(([x,y,r]) => { g.beginPath(); g.arc(S*x, S*y, r, 0, Math.PI*2); g.fill(); });
+    return c;
+  }
+  function setSource(img, name, note) {
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(img, 0, 0, c.width, c.height);
+    srcCanvas = c;
+    $('imgName').textContent = name; $('imgNote').textContent = note;
+    schedule();
+  }
+  // Dibuja la imagen en un cuadrado de lado S, con el zoom y la posición elegidos.
+  function drawFramed(g, S, st) {
+    const iw = srcCanvas.width, ih = srcCanvas.height;
+    const sc = S / Math.min(iw, ih) * st.zoom / 100, dw = iw * sc, dh = ih * sc;
+    const rx = Math.max(Math.abs(dw - S) / 2, S * 0.25), ry = Math.max(Math.abs(dh - S) / 2, S * 0.25);
+    g.fillStyle = '#fff'; g.fillRect(0, 0, S, S);
+    g.drawImage(srcCanvas, (S - dw) / 2 + st.posX / 100 * rx, (S - dh) / 2 + st.posY / 100 * ry, dw, dh);
+  }
+  function loadFile(f) {
+    if (!f) return;
+    if (!f.type.startsWith('image/')) { $('imgNote').textContent = 'Ese archivo no es una imagen. Elige una foto en JPG o PNG.'; return; }
+    const url = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      const note = im.width !== im.height ? 'Para encuadrarla, usa Zoom y Posición en el paso 4.' : 'Imagen lista.';
+      setSource(im, f.name || 'Imagen pegada', note); URL.revokeObjectURL(url);
+    };
+    im.onerror = () => { $('imgNote').textContent = 'No pudimos abrir esa imagen. Prueba con una foto en JPG o PNG.'; URL.revokeObjectURL(url); };
+    im.src = url;
+  }
+
+  // ---------- QR ----------
+  function makeQR(text, ecc, minVer) {
+    for (let v = minVer; v <= 40; v++) {
+      try { const q = qrcode(v, ecc); q.addData(text, 'Byte'); q.make(); return { q, v }; } catch (e) { /* no cabe: subir nivel */ }
+    }
+    return null;
+  }
+  function functionMap(v, N) {
+    const f = new Uint8Array(N * N), mark = (r, c) => { if (r >= 0 && c >= 0 && r < N && c < N) f[r * N + c] = 1; };
+    for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) mark(r, c);
+    for (let r = 0; r < 9; r++) for (let c = 0; c < 8; c++) mark(r, N - 1 - c);
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 9; c++) mark(N - 1 - r, c);
+    for (let i = 0; i < N; i++) { mark(6, i); mark(i, 6); }
+    const P = ALIGN[v];
+    for (const r of P) for (const c of P) {
+      if ((r < 9 && c < 9) || (r < 9 && c > N - 10) || (r > N - 10 && c < 9)) continue;
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) mark(r + dr, c + dc);
+    }
+    if (v >= 7) for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) { mark(i, N - 11 + j); mark(N - 11 + j, i); }
+    return f;
+  }
+  function luminance(W, bright, contrast, gamma, st) {
+    const c = document.createElement('canvas'); c.width = c.height = W;
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    drawFramed(g, W, st);
+    const d = g.getImageData(0, 0, W, W).data, L = new Float32Array(W * W);
+    for (let i = 0; i < W * W; i++) {
+      let y = (0.2126 * d[i*4] + 0.7152 * d[i*4+1] + 0.0722 * d[i*4+2]) / 255;
+      y = Math.pow(Math.min(1, Math.max(0, y)), gamma);
+      y = (y - 0.5) * contrast + 0.5 + bright;
+      L[i] = Math.min(1, Math.max(0, y));
+    }
+    return L;
+  }
+  // Floyd–Steinberg con puntos forzados: el error de los centros forzados pasa a sus vecinos.
+  function dither(L, W, fixed, pass) {
+    const buf = Float32Array.from(L), out = new Uint8Array(W * W);
+    for (let y = 0; y < W; y++) {
+      const ltr = (y % 2 === 0), step = ltr ? 1 : -1;
+      for (let k = 0, x = ltr ? 0 : W - 1; k < W; k++, x += step) {
+        const i = y * W + x, old = buf[i], f = fixed[i];
+        const nv = f >= 0 ? f : (old >= 0.5 ? 1 : 0);
+        out[i] = nv;
+        if (f >= 0 && !pass[i]) continue;
+        const e = old - nv;
+        const add = (dx, dy, w) => { const xx = x + dx * step, yy = y + dy; if (xx >= 0 && xx < W && yy < W) buf[yy * W + xx] += e * w; };
+        add(1, 0, 7/16); add(-1, 1, 3/16); add(0, 1, 5/16); add(1, 1, 1/16);
+      }
+    }
+    return out;
+  }
+  function paint(pix, W, scale) {
+    const T = W + QUIET * SUB * 2;
+    const small = document.createElement('canvas'); small.width = small.height = T;
+    const g = small.getContext('2d'), id = g.createImageData(T, T), d = id.data;
+    d.fill(255);
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (pix[y * W + x]) continue;
+      const o = ((y + QUIET * SUB) * T + (x + QUIET * SUB)) * 4;
+      d[o] = d[o+1] = d[o+2] = 0;
+    }
+    g.putImageData(id, 0, 0);
+    const c = document.createElement('canvas'); c.width = c.height = T * scale;
+    const cg = c.getContext('2d'); cg.imageSmoothingEnabled = false; cg.drawImage(small, 0, 0, T * scale, T * scale);
+    return c;
+  }
+  function verify(canvas, blurPx) {
+    if (typeof jsQR !== 'function') return undefined;
+    let c = canvas;
+    if (blurPx) {
+      c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
+      const g = c.getContext('2d');
+      if (!('filter' in g)) return undefined;
+      g.filter = `blur(${blurPx}px)`; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(canvas, 0, 0);
+    }
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+    const r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
+    return r ? r.data : null;
+  }
+
+  // ---------- Tipos de código ----------
+  const digits = s => (s || '').replace(/\D/g, '');
+  const fullPhone = (cc, p) => { p = (p || '').trim(); return p.startsWith('+') ? '+' + digits(p) : '+' + digits(cc) + digits(p); };
+  const escWifi = s => s.replace(/([\\;,:"])/g, '\\$1');
+  const escV = s => s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  const icsDate = s => s.replace(/[-:]/g, '').slice(0, 13) + '00';
+  const CC = { k: 'cc', label: 'Indicativo del país', type: 'tel', val: '57', ph: '57', hint: 'Colombia es 57.', half: true };
+  const PHONE = { k: 'phone', label: 'Número', type: 'tel', ph: '300 123 4567', req: true, half: true };
+  const phoneCheck = v => digits(v.phone).length < 7 ? 'El número parece incompleto.' : null;
+  const TYPES = [
+    { id: 'url', name: 'Enlace', help: 'Al escanearlo, el teléfono abre esta página web.',
+      fields: [{ k: 'url', label: 'Dirección web', type: 'url', ph: 'https://tusitio.com', req: true, val: 'https://hackaday.com/2026/11/06/using-halftone-images-in-qr-codes-without-upsetting-scanners/', hint: 'Si no escribes https://, lo agregamos.' }],
+      build: v => { const u = v.url.trim(); return /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u; } },
+    { id: 'text', name: 'Texto', help: 'Al escanearlo, el teléfono muestra este texto.',
+      fields: [{ k: 'text', label: 'Texto', type: 'textarea', req: true, ph: 'Escribe aquí tu mensaje' }],
+      build: v => v.text },
+    { id: 'whatsapp', name: 'WhatsApp', help: 'Al escanearlo, se abre un chat de WhatsApp con este número y el mensaje ya escrito.',
+      fields: [CC, { ...PHONE, label: 'Número de celular' }, { k: 'msg', label: 'Mensaje inicial (opcional)', type: 'textarea', ph: 'Hola, quiero más información.' }],
+      check: phoneCheck,
+      build: v => `https://wa.me/${fullPhone(v.cc, v.phone).slice(1)}` + (v.msg.trim() ? `?text=${encodeURIComponent(v.msg.trim())}` : '') },
+    { id: 'wifi', name: 'Wi-Fi', help: 'Al escanearlo, el teléfono ofrece conectarse a la red sin escribir la contraseña. Ojo: quien escanee el código puede ver la contraseña.',
+      fields: [{ k: 'ssid', label: 'Nombre de la red', req: true, ph: 'MiCasa_5G' },
+        { k: 'sec', label: 'Tipo de seguridad', type: 'select', val: 'WPA', options: [['WPA', 'WPA o WPA2 (la más común)'], ['WEP', 'WEP (redes antiguas)'], ['nopass', 'Sin contraseña']] },
+        { k: 'pass', label: 'Contraseña', ph: 'La contraseña de la red' },
+        { k: 'hidden', label: 'La red está oculta (no aparece en la lista de redes)', type: 'checkbox' }],
+      check: v => v.sec !== 'nopass' && !v.pass ? 'Falta la contraseña. Escríbela o elige “Sin contraseña”.' : null,
+      build: v => `WIFI:T:${v.sec};S:${escWifi(v.ssid)};${v.sec !== 'nopass' ? `P:${escWifi(v.pass)};` : ''}${v.hidden ? 'H:true;' : ''};` },
+    { id: 'contact', name: 'Contacto', help: 'Al escanearlo, el teléfono ofrece guardar esta persona en los contactos.',
+      fields: [{ k: 'first', label: 'Nombre', half: true }, { k: 'last', label: 'Apellido', half: true },
+        { k: 'org', label: 'Empresa', half: true }, { k: 'title', label: 'Cargo', half: true },
+        { k: 'tel', label: 'Teléfono', type: 'tel', ph: '+57 300 123 4567', hint: 'Incluye el indicativo, por ejemplo +57.' },
+        { k: 'email', label: 'Correo', type: 'email', ph: 'nombre@empresa.com' },
+        { k: 'web', label: 'Sitio web', type: 'url', ph: 'https://empresa.com' },
+        { k: 'addr', label: 'Dirección', ph: 'Calle 1 # 2-3, Bogotá' }],
+      check: v => !(v.first.trim() || v.last.trim() || v.org.trim()) ? 'Falta el nombre o la empresa.' : null,
+      build: v => {
+        const L = ['BEGIN:VCARD', 'VERSION:3.0', `N:${escV(v.last.trim())};${escV(v.first.trim())};;;`, `FN:${escV(`${v.first} ${v.last}`.trim() || v.org.trim())}`];
+        if (v.org.trim()) L.push(`ORG:${escV(v.org.trim())}`);
+        if (v.title.trim()) L.push(`TITLE:${escV(v.title.trim())}`);
+        if (v.tel.trim()) L.push(`TEL;TYPE=CELL:${v.tel.trim().replace(/[^\d+]/g, '')}`);
+        if (v.email.trim()) L.push(`EMAIL:${v.email.trim()}`);
+        if (v.web.trim()) L.push(`URL:${v.web.trim()}`);
+        if (v.addr.trim()) L.push(`ADR;TYPE=WORK:;;${escV(v.addr.trim())};;;;`);
+        L.push('END:VCARD'); return L.join('\r\n');
+      } },
+    { id: 'email', name: 'Correo', help: 'Al escanearlo, se abre un correo nuevo con el destinatario, el asunto y el mensaje ya escritos.',
+      fields: [{ k: 'to', label: 'Para', type: 'email', req: true, ph: 'nombre@empresa.com' }, { k: 'subject', label: 'Asunto (opcional)' }, { k: 'body', label: 'Mensaje (opcional)', type: 'textarea' }],
+      check: v => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.to.trim()) ? 'El correo no parece válido. Revisa que tenga @ y un dominio.' : null,
+      build: v => { const p = []; if (v.subject.trim()) p.push('subject=' + encodeURIComponent(v.subject.trim())); if (v.body.trim()) p.push('body=' + encodeURIComponent(v.body.trim())); return `mailto:${v.to.trim()}` + (p.length ? '?' + p.join('&') : ''); } },
+    { id: 'call', name: 'Llamada', help: 'Al escanearlo, el teléfono ofrece llamar a este número.',
+      fields: [CC, PHONE], check: phoneCheck, build: v => `tel:${fullPhone(v.cc, v.phone)}` },
+    { id: 'sms', name: 'SMS', help: 'Al escanearlo, se abre un mensaje de texto para este número con el mensaje ya escrito.',
+      fields: [CC, PHONE, { k: 'msg', label: 'Mensaje (opcional)', type: 'textarea' }], check: phoneCheck,
+      build: v => `SMSTO:${fullPhone(v.cc, v.phone)}:${v.msg.trim()}` },
+    { id: 'map', name: 'Ubicación', help: 'Al escanearlo, se abre Google Maps en este lugar.',
+      fields: [{ k: 'q', label: 'Dirección, lugar o coordenadas', req: true, ph: 'Plaza de Bolívar, Bogotá', hint: 'También sirven coordenadas, por ejemplo 4.5981, -74.0760.' }],
+      build: v => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.q.trim())}` },
+    { id: 'event', name: 'Evento', help: 'Al escanearlo, el teléfono ofrece agregar el evento al calendario.',
+      fields: [{ k: 'title', label: 'Nombre del evento', req: true, ph: 'Lanzamiento' },
+        { k: 'start', label: 'Empieza', type: 'datetime-local', req: true, half: true },
+        { k: 'end', label: 'Termina (opcional)', type: 'datetime-local', half: true, hint: 'Si lo dejas vacío, dura 1 hora.' },
+        { k: 'place', label: 'Lugar (opcional)' }, { k: 'desc', label: 'Descripción (opcional)', type: 'textarea' }],
+      check: v => v.end && v.end <= v.start ? 'La hora de fin debe ser después del inicio.' : null,
+      build: v => {
+        let end = v.end;
+        if (!end) { const d = new Date(v.start); d.setHours(d.getHours() + 1); const p = n => String(n).padStart(2, '0'); end = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+        const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `SUMMARY:${escV(v.title.trim())}`, `DTSTART:${icsDate(v.start)}`, `DTEND:${icsDate(end)}`];
+        if (v.place.trim()) L.push(`LOCATION:${escV(v.place.trim())}`);
+        if (v.desc.trim()) L.push(`DESCRIPTION:${escV(v.desc.trim())}`);
+        L.push('END:VEVENT', 'END:VCALENDAR'); return L.join('\r\n');
+      } },
+  ];
+  const fid = (t, k) => `f-${t}-${k}`;
+  (function buildForms() {
+    const types = $('types'), forms = $('forms');
+    TYPES.forEach((T, i) => {
+      const r = document.createElement('input'); r.type = 'radio'; r.name = 'qtype'; r.id = 'qt-' + T.id; r.value = T.id; r.checked = i === 0;
+      const l = document.createElement('label'); l.htmlFor = r.id; l.textContent = T.name;
+      types.append(r, l);
+      const box = document.createElement('div'); box.className = 'tform'; box.id = 'tf-' + T.id; box.hidden = i !== 0;
+      T.fields.forEach(F => {
+        const id = fid(T.id, F.k), wrap = document.createElement('div');
+        wrap.className = 'f' + (F.half ? ' half' : '');
+        if (F.type === 'checkbox') {
+          const lab = document.createElement('label'); lab.className = 'checkline';
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = id;
+          lab.append(cb, F.label); wrap.append(lab);
+        } else {
+          const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = F.label + (F.req ? '' : '');
+          let el;
+          if (F.type === 'textarea') { el = document.createElement('textarea'); el.rows = 3; }
+          else if (F.type === 'select') { el = document.createElement('select'); F.options.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; el.append(o); }); }
+          else { el = document.createElement('input'); el.type = F.type || 'text'; if (F.type === 'tel') el.inputMode = 'tel'; }
+          el.id = id; if (F.ph) el.placeholder = F.ph; if (F.val != null) el.value = F.val;
+          if (F.type === 'email' || F.type === 'url') { el.autocapitalize = 'off'; el.spellcheck = false; }
+          wrap.append(lab, el);
+          if (F.hint) { const h = document.createElement('p'); h.className = 'hint'; h.textContent = F.hint; wrap.append(h); }
+        }
+        box.append(wrap);
+      });
+      forms.append(box);
+    });
+    types.addEventListener('change', () => {
+      const cur = document.querySelector('input[name="qtype"]:checked').value;
+      TYPES.forEach(T => { $('tf-' + T.id).hidden = T.id !== cur; });
+      $('typeHelp').textContent = TYPES.find(T => T.id === cur).help;
+    });
+    $('typeHelp').textContent = TYPES[0].help;
+  })();
+  function buildPayload() {
+    const cur = document.querySelector('input[name="qtype"]:checked').value, T = TYPES.find(x => x.id === cur), v = {};
+    T.fields.forEach(F => { const el = $(fid(T.id, F.k)); v[F.k] = F.type === 'checkbox' ? el.checked : el.value; });
+    const miss = T.fields.find(F => F.req && !String(v[F.k]).trim());
+    if (miss) return { error: `Falta completar “${miss.label}”.` };
+    const bad = T.check && T.check(v);
+    if (bad) return { error: bad };
+    return { payload: T.build(v) };
+  }
+
+  // ---------- Textos de los ajustes ----------
+  const signed = (n, pos, neg) => n === 0 ? '0 · sin cambio' : (n > 0 ? `+${n} · ${pos}` : `−${-n} · ${neg}`);
+  function readState() {
+    return {
+      zoom: +$('zoom').value, posX: +$('posX').value, posY: +$('posY').value,
+      bright: +$('bright').value, contrast: +$('contrast').value, mid: +$('mid').value,
+      ecc: document.querySelector('input[name="ecc"]:checked').value,
+      minVer: +$('minVer').value, flip: +$('flip').value,
+    };
+  }
+  function labels(st) {
+    $('zoomOut').textContent = st.zoom + ' %' + (st.zoom === 100 ? ' · llena el código' : st.zoom < 100 ? ' · con borde blanco' : ' · más cerca');
+    $('posXOut').textContent = st.posX === 0 ? '0 · centrada' : (st.posX > 0 ? `+${st.posX} · a la derecha` : `−${-st.posX} · a la izquierda`);
+    $('posYOut').textContent = st.posY === 0 ? '0 · centrada' : (st.posY > 0 ? `+${st.posY} · más abajo` : `−${-st.posY} · más arriba`);
+    $('brightOut').textContent = signed(st.bright, 'más clara', 'más oscura');
+    $('contrastOut').textContent = st.contrast + ' %' + (st.contrast === 100 ? ' · original' : '');
+    $('midOut').textContent = signed(st.mid, 'más claros', 'más oscuros');
+    $('eccOut').textContent = `${ECC_NAME[st.ecc]} · ${ECC_PCT[st.ecc]} %`;
+  }
+
+  // ---------- Resultado ----------
+  let saveCanvas = null;
+  function setVerdict(kind, title, detail) {
+    const v = $('verdict'); v.className = 'verdict ' + kind;
+    v.innerHTML = '<span class="icon" aria-hidden="true"></span><div><p><strong></strong></p><p></p></div>';
+    v.querySelector('.icon').textContent = kind === 'ok' ? '✓' : kind === 'warn' ? '!' : '×';
+    v.querySelector('strong').textContent = title;
+    v.querySelectorAll('p')[1].textContent = detail;
+    $('miniTxt').textContent = kind === 'ok' ? 'Se lee' : kind === 'warn' ? 'Revisa' : 'No se lee';
+    $('miniDot').style.background = `var(--${kind})`;
+  }
+  function setFacts(list) {
+    const ul = $('facts'); ul.replaceChildren();
+    list.forEach(([k, val]) => { const li = document.createElement('li'); const b = document.createElement('b'); b.textContent = val; li.append(k + ': ', b); ul.append(li); });
+  }
+
+  function render() {
+    const st = readState();
+    labels(st);
+    const built = buildPayload();
+    st.text = built.payload || '';
+    $('payload').textContent = st.text || '(vacío)';
+    const chars = [...st.text].length;
+    $('count').textContent = chars ? `El contenido tiene ${chars} caracteres. Entre más corto, más espacio queda para la imagen.` : '';
+
+    if (built.error) { setVerdict('bad', built.error, 'Complétalo en el paso 1 para crear el código.'); setFacts([]); return; }
+    const made = makeQR(st.text, st.ecc, st.minVer);
+    if (!made) { setVerdict('bad', 'El texto es demasiado largo para un código QR.', 'Acórtalo o baja la protección contra daños.'); setFacts([]); return; }
+    const { q, v } = made, N = q.getModuleCount(), W = N * SUB;
+    const askedN = 17 + 4 * st.minVer;
+    $('verOut').textContent = `${askedN} × ${askedN} cuadros`;
+    $('verHint').textContent = v > st.minVer
+      ? `Tu texto no cabe en ${askedN} × ${askedN} cuadros, así que el código usa ${N} × ${N}. Más cuadros dan más detalle a la imagen, pero el código debe imprimirse más grande.`
+      : 'Es el número de cuadros del código. Más cuadros dan más detalle a la imagen, pero el código debe imprimirse más grande para que el teléfono lo lea.';
+
+    const fmap = functionMap(v, N);
+    const L = luminance(W, st.bright / 100, st.contrast / 100, Math.pow(2, -st.mid / 50), st);
+    { const t = $('thumb').getContext('2d'); t.imageSmoothingQuality = 'high'; drawFramed(t, 112, st); }
+
+    // Cuadros cedidos a la imagen: los que más chocan con ella.
+    let dataCount = 0;
+    for (let i = 0; i < N * N; i++) if (!fmap[i]) dataCount++;
+    const freed = new Uint8Array(N * N);
+    let freedCount = 0;
+    if (st.flip > 0) {
+      const cand = [];
+      for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+        if (fmap[r * N + c]) continue;
+        let m = 0; for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) m += L[(r*3+dy) * W + c*3+dx];
+        const conflict = Math.abs(m / 9 - (q.isDark(r, c) ? 0 : 1));
+        if (conflict > 0.5) cand.push([conflict, r * N + c]);
+      }
+      cand.sort((a, b) => b[0] - a[0]);
+      freedCount = Math.min(cand.length, Math.round(dataCount * st.flip / 100));
+      for (let i = 0; i < freedCount; i++) freed[cand[i][1]] = 1;
+    }
+    $('flipOut').textContent = st.flip === 0 ? '0 % · apagada' : `${st.flip} % · ${freedCount.toLocaleString('es-CO')} de ${dataCount.toLocaleString('es-CO')} cuadros`;
+
+    const fixed = new Int8Array(W * W).fill(-1), pass = new Uint8Array(W * W);
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const val = q.isDark(r, c) ? 0 : 1, mi = r * N + c;
+      if (fmap[mi]) { for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) fixed[(r*3+dy) * W + c*3+dx] = val; }
+      else if (!freed[mi]) { const ci = (r*3+1) * W + c*3+1; fixed[ci] = val; pass[ci] = 1; }
+    }
+    const pix = dither(L, W, fixed, pass);
+    const T = W + QUIET * SUB * 2;
+
+    const big = paint(pix, W, Math.max(3, Math.ceil(1800 / T)));
+    saveCanvas = big;
+    const url = big.toDataURL('image/png');
+    $('out').src = url; $('miniImg').src = url;
+
+    const tScale = Math.max(2, Math.floor(1000 / T));
+    const test = paint(pix, W, tScale);
+    const sharp = verify(test, 0), soft = verify(test, Math.max(1, tScale * 0.3));
+    if (sharp === undefined) setVerdict('warn', 'No pudimos probar el código en esta página.', 'Escanéalo con tu teléfono antes de usarlo.');
+    else if (sharp === st.text && soft === st.text) setVerdict('ok', 'El código se puede escanear.', 'Lo probamos nítido y un poco borroso, como lo ve una cámara. Antes de imprimirlo, escanéalo con tu teléfono.');
+    else if (sharp === st.text) setVerdict('warn', 'Se lee solo si la imagen está muy nítida.', 'Para que sea más seguro, baja la prioridad a la imagen, sube la protección contra daños o sube el contraste.');
+    else setVerdict('bad', 'El código no se puede escanear.', st.flip > 0 ? 'Baja la prioridad a la imagen a 0 % o sube la protección contra daños.' : 'Sube la protección contra daños o el contraste. Si sigue igual, prueba con otra imagen.');
+
+    setFacts([['Tamaño', `${N} × ${N} cuadros`], ['Protección', `${ECC_NAME[st.ecc]} (${ECC_PCT[st.ecc]} %)`], ['Imagen', `${big.width} × ${big.width} píxeles`]]);
+  }
+
+  let t = 0;
+  function schedule() { clearTimeout(t); t = setTimeout(render, 110); }
+
+  // ---------- Descarga ----------
+  let downloads = null;
+  if (!window.claude?.use) {
+    // Fuera de Claude: descarga directa con un enlace temporal.
+    downloads = { save: ({ filename, data }) => new Promise(res => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = filename;
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); res({ status: 'saved' });
+    }) };
+    $('btnSave').hidden = false;
+    $('saveHint').textContent = 'También puedes hacer clic derecho sobre el código (o mantenerlo presionado en el teléfono) y elegir “Guardar imagen”.';
+  }
+  if (window.claude?.use) {
+    window.claude.use('downloads').then(d => {
+      downloads = d;
+      if (d) { $('btnSave').hidden = false; $('saveHint').textContent = 'También puedes mantener presionado el código (en el teléfono) o hacer clic derecho y elegir “Guardar imagen”.'; }
+    }).catch(() => {});
+  }
+  $('btnSave').addEventListener('click', () => {
+    if (!downloads || !saveCanvas) return;
+    const msg = $('saveMsg'); msg.textContent = 'Preparando la imagen…';
+    saveCanvas.toBlob(blob => {
+      downloads.save({ filename: 'codigo-qr.png', data: blob })
+        .then(() => { msg.textContent = 'Listo. La imagen está en tus descargas.'; })
+        .catch(e => {
+          const code = e && e.code;
+          if (code === 'declined') msg.textContent = 'Cancelaste la descarga.';
+          else if (code === 'rate_limited') msg.textContent = 'Ya hay una descarga abierta. Ciérrala e inténtalo de nuevo.';
+          else { msg.textContent = 'Aquí no se puede descargar. Mantén presionado el código o haz clic derecho para guardarlo.'; $('btnSave').hidden = true; }
+        });
+    }, 'image/png');
+  });
+
+  // ---------- Eventos ----------
+  $('controls').addEventListener('input', schedule);
+  $('controls').addEventListener('change', schedule);
+  $('controls').addEventListener('submit', e => e.preventDefault());
+  $('btnCamera').addEventListener('click', () => $('fileCamera').click());
+  $('btnUpload').addEventListener('click', () => $('fileUpload').click());
+  $('fileCamera').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+  $('fileUpload').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+  $('btnSample').addEventListener('click', () => setSource(drawSample(), 'Imagen de ejemplo', SAMPLE_NOTE));
+  $('btnReset').addEventListener('click', () => {
+    $('zoom').value = DEFAULTS.zoom; $('posX').value = DEFAULTS.posX; $('posY').value = DEFAULTS.posY;
+    $('bright').value = DEFAULTS.bright; $('contrast').value = DEFAULTS.contrast; $('mid').value = DEFAULTS.mid;
+    $('ecc' + DEFAULTS.ecc).checked = true; $('minVer').value = DEFAULTS.minVer; $('flip').value = DEFAULTS.flip;
+    schedule();
+  });
+  $('btnCenter').addEventListener('click', () => { $('posX').value = 0; $('posY').value = 0; schedule(); });
+  const card = $('imageCard');
+  ['dragenter', 'dragover'].forEach(ev => card.addEventListener(ev, e => { e.preventDefault(); card.classList.add('drop-over'); }));
+  ['dragleave', 'drop'].forEach(ev => card.addEventListener(ev, e => { e.preventDefault(); card.classList.remove('drop-over'); }));
+  card.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+  document.addEventListener('paste', e => {
+    const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+    if (it) { e.preventDefault(); loadFile(it.getAsFile()); }
+  });
+
+  // Vista previa flotante en móvil: aparece cuando estás en los ajustes y el código no está a la vista.
+  if ('IntersectionObserver' in window) {
+    let resultVisible = true, settingsVisible = false;
+    const upd = () => { $('mini').hidden = resultVisible || !settingsVisible; };
+    new IntersectionObserver(es => { resultVisible = es[0].isIntersecting; upd(); }, { threshold: 0.15 }).observe($('out'));
+    new IntersectionObserver(es => { settingsVisible = es[0].isIntersecting; upd(); }).observe(document.querySelector('.settings'));
+  }
+  $('mini').addEventListener('click', () => $('resultCard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }));
+
+  setSource(drawSample(), 'Imagen de ejemplo', SAMPLE_NOTE);
+})();
+</script>
+</body>
+</html>
