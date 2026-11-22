@@ -372,15 +372,6 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       <div class="group">
         <h3>El código</h3>
         <div class="ctl">
-          <div class="ctl-head"><span class="lbl" id="readLbl">Facilidad de lectura</span><output id="readOut"></output></div>
-          <div class="seg three" role="radiogroup" aria-labelledby="readLbl">
-            <input type="radio" name="read" id="rdImg" value="img" checked><label for="rdImg">Más imagen</label>
-            <input type="radio" name="read" id="rdBal" value="bal"><label for="rdBal">Equilibrada</label>
-            <input type="radio" name="read" id="rdRead" value="read"><label for="rdRead">Más lectura</label>
-          </div>
-          <p class="hint">Cambia el tamaño del centro de cada cuadro, que es la parte que lee el teléfono. Con un centro más grande, la cámara lee más fácil, pero la imagen pierde detalle y se ven cuadros más grandes. Empieza con “Más imagen” y sube solo si a la cámara le cuesta leer el código.</p>
-        </div>
-        <div class="ctl">
           <div class="ctl-head"><span class="lbl" id="eccLbl">Protección contra daños</span><output id="eccOut"></output></div>
           <div class="seg" role="radiogroup" aria-labelledby="eccLbl">
             <input type="radio" name="ecc" id="eccL" value="L"><label for="eccL">Baja<small>7 %</small></label>
@@ -413,7 +404,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     <div class="how">
       <div>
         <p>El teléfono no mira cada cuadro del código completo. Solo mira su centro.</p>
-        <p>Esta página divide cada cuadro en puntos: 9, 16 o 25, según la facilidad de lectura. Los puntos del centro guardan el dato del código. Los de alrededor dibujan tu imagen con una trama de puntos, como la de un periódico.</p>
+        <p>Esta página divide cada cuadro en 9 puntos. El punto del centro guarda el dato del código. Los 8 puntos de alrededor dibujan tu imagen con una trama de puntos, como la de un periódico.</p>
         <p>Los 3 cuadros grandes de las esquinas y los cuadros pequeños de guía no cambian. El teléfono los usa para ubicar el código.</p>
         <p>La página prueba cada código con un lector de QR, nítido y un poco borroso, como lo ve una cámara. Esa prueba no reemplaza a un teléfono real: escanea el código antes de imprimirlo.</p>
         <p>En modo video, cada cuadro del GIF es un código con los mismos datos. Los puntos centrales no cambian; solo se mueven los de alrededor. Por eso el teléfono puede leer cualquier cuadro.</p>
@@ -426,7 +417,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
           <rect class="cell-ink" x="0" y="20" width="19" height="19"/><rect class="cell-mag" x="20" y="20" width="19" height="19"/><rect class="cell-paper" x="40.5" y="20.5" width="18" height="18"/>
           <rect class="cell-paper" x="0.5" y="40.5" width="18" height="18"/><rect class="cell-ink" x="20" y="40" width="19" height="19"/><rect class="cell-ink" x="40" y="40" width="19" height="19"/>
         </svg>
-        <figcaption>Un cuadro con la opción “Más imagen”: 9 puntos. En color, el punto que lee el teléfono.</figcaption>
+        <figcaption>Un cuadro del código. En color, el punto que lee el teléfono.</figcaption>
       </figure>
     </div>
   </details>
@@ -451,7 +442,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     [6,34,62,90,118,146], [6,30,54,78,102,126,150], [6,24,50,76,102,128,154], [6,28,54,80,106,132,158], [6,32,58,84,110,136,162],
     [6,26,54,82,110,138,166], [6,30,58,86,114,142,170]];
   const QUIET = 4;
-  // Facilidad de lectura: cada cuadro se divide en sub×sub puntos y el centro core×core guarda el dato.
+  // Cada cuadro se divide en sub×sub puntos y el centro core×core guarda el dato. La página usa 3×3 con centro de 1 punto.
   const READ = { img: { sub: 3, core: 1 }, bal: { sub: 4, core: 2 }, read: { sub: 5, core: 3 } };
   const ECC_NAME = { L: 'Baja', M: 'Media', Q: 'Alta', H: 'Máxima' };
   const ECC_PCT = { L: 7, M: 15, Q: 25, H: 30 };
@@ -478,8 +469,8 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       g.restore();
     };
     ring(false);
-    // La luz gira alrededor del centro y siempre queda dentro de la esfera (si sale, el navegador pinta la esfera de negro).
-    const la = TAU * ph - 2.28, sp = g.createRadialGradient(S*(.5 + .184 * Math.cos(la)), S*(.47 + .184 * Math.sin(la)), S*.02, S*.5, S*.47, S*.27);
+    // La luz se mueve poco, arriba a la izquierda, y nunca sale de la esfera (si sale, el navegador pinta la esfera de negro).
+    const sp = g.createRadialGradient(S*(.38 + .04 * Math.sin(TAU * ph)), S*(.33 + .03 * Math.sin(TAU * ph * 2)), S*.02, S*.5, S*.47, S*.27);
     sp.addColorStop(0, '#ffffff'); sp.addColorStop(.35, '#b9b9b9'); sp.addColorStop(.8, '#3a3a3a'); sp.addColorStop(1, '#141414');
     g.fillStyle = sp; g.beginPath(); g.arc(S*.5, S*.47, S*.27, 0, Math.PI*2); g.fill();
     ring(true);
@@ -751,7 +742,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       dmode: document.querySelector('input[name="dmode"]:checked').value,
       gsize: +document.querySelector('input[name="gsize"]:checked').value,
       loop: document.querySelector('input[name="loop"]:checked').value,
-      read: document.querySelector('input[name="read"]:checked').value,
+      read: 'img',
     };
   }
   function labels(st) {
@@ -766,7 +757,6 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     $('vStartOut').textContent = `${sec(st.vStart)} de ${sec(videoSrc.duration)}`;
     $('vDurOut').textContent = sec(st.vDur);
     $('loopOut').textContent = { fade: 'Fundido', bounce: `Ida y vuelta · ${sec(st.vDur * 2)}`, cut: 'Corte' }[st.loop];
-    $('readOut').textContent = { img: '1 de 9 puntos', bal: '4 de 16 puntos', read: '9 de 25 puntos' }[st.read];
     $('fpsOut').textContent = `${st.fps} por segundo`;
     $('dmodeOut').textContent = st.dmode === 'fixed' ? 'Fija' : 'Difusa';
   }
@@ -996,7 +986,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       const res = verify(draw(ctx, pix, 2), 0);
       if (res === undefined) setVerdict('warn', 'No pudimos probar el código en esta página.', 'Escanéalo con tu teléfono antes de usarlo.');
       else if (res === ctx.text) setVerdict('ok', 'La vista previa se lee.', 'Crea el GIF para probar todos los cuadros, también un poco borrosos.');
-      else setVerdict('bad', 'Este cuadro de la vista previa no se lee.', 'Sube la facilidad de lectura, el contraste o la protección contra daños.');
+      else setVerdict('bad', 'Este cuadro de la vista previa no se lee.', 'Sube el contraste o la protección contra daños, o usa la trama fija.');
       try { $('miniImg').src = $('outVid').toDataURL('image/png'); } catch (e) { /* sin miniatura */ }
     }
   }
@@ -1070,8 +1060,8 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       $('prog').hidden = true;
       $('progTxt').textContent = 'GIF listo. Si cambias un ajuste, vuelve a crearlo.';
       if (okSoft === n) setVerdict('ok', `Se leen los ${n} cuadros.`, 'Los probamos nítidos y un poco borrosos. Antes de usarlo, escanéalo con tu teléfono desde la pantalla.');
-      else if (okSharp >= Math.ceil(n * 0.8)) setVerdict('warn', `Se leen ${okSharp} de ${n} cuadros.`, 'El teléfono necesita leer solo un cuadro, pero entre más se lean, más rápido escanea. Para mejorar, sube la facilidad de lectura o el contraste.');
-      else setVerdict('bad', `Solo se leen ${okSharp} de ${n} cuadros.`, 'Sube la facilidad de lectura, el contraste o la protección contra daños, o baja la prioridad a la imagen a 0 %.');
+      else if (okSharp >= Math.ceil(n * 0.8)) setVerdict('warn', `Se leen ${okSharp} de ${n} cuadros.`, 'El teléfono necesita leer solo un cuadro, pero entre más se lean, más rápido escanea. Para mejorar, sube el contraste o la protección contra daños, o usa la trama fija.');
+      else setVerdict('bad', `Solo se leen ${okSharp} de ${n} cuadros.`, 'Sube el contraste o la protección contra daños, usa la trama fija o baja la prioridad a la imagen a 0 %.');
       videoFacts(ctx, st, seq, [['Archivo', fmtSize(gifBlob.size)]]);
       updateSaveButton();
     } finally {
@@ -1191,7 +1181,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     $('zoom').value = DEFAULTS.zoom; $('posX').value = DEFAULTS.posX; $('posY').value = DEFAULTS.posY;
     $('bright').value = DEFAULTS.bright; $('contrast').value = DEFAULTS.contrast; $('mid').value = DEFAULTS.mid;
     $('ecc' + DEFAULTS.ecc).checked = true; $('minVer').value = DEFAULTS.minVer; $('flip').value = DEFAULTS.flip;
-    $('vStart').value = 0; $('vDur').value = Math.min(3, +$('vDur').max); $('fps10').checked = true; $('dmFixed').checked = true; $('gs3').checked = true; $('lpFade').checked = true; $('rdImg').checked = true;
+    $('vStart').value = 0; $('vDur').value = Math.min(3, +$('vDur').max); $('fps10').checked = true; $('dmFixed').checked = true; $('gs3').checked = true; $('lpFade').checked = true;
     schedule();
   });
   $('btnCenter').addEventListener('click', () => { $('posX').value = 0; $('posY').value = 0; schedule(); });
