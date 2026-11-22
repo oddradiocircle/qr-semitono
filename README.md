@@ -2,9 +2,11 @@
 
 Página web que crea un código QR con una imagen dentro, dibujada con una trama de puntos. El código se sigue pudiendo escanear con el teléfono.
 
+**Úsala en línea:** <https://oddradiocircle.github.io/qr-semitono/>
+
 ## Cómo usarla
 
-1. Abre `index.html` en el navegador. No necesita instalación ni servidor.
+1. Abre la página en línea, o abre `index.html` en el navegador. No necesita instalación ni servidor.
 2. Elige qué hace el código: enlace, texto, WhatsApp, wifi, contacto, correo, llamada, SMS, ubicación o evento.
 3. Toma una foto o carga una imagen.
 4. Ajusta el resultado: zoom, posición, brillo, contraste, tonos medios, protección contra daños, detalle y prioridad a la imagen.
