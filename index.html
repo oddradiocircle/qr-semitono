@@ -184,16 +184,26 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .mini .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .mini[hidden] { display: none !important; }
 @media (min-width: 900px) { .mini { display: none !important; } }
+.app[data-mode="image"] .vid-only, .app[data-mode="video"] .img-only { display: none !important; }
+.seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#outVid, #gifOut { width: 100%; aspect-ratio: 1; image-rendering: pixelated; display: block; border-radius: 6px; background: #fff; }
+#outVid[hidden], #gifOut[hidden], #out[hidden] { display: none !important; }
+.vid-actions { display: grid; gap: 8px; }
+.progress { height: 8px; border-radius: 4px; background: var(--rule); overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.progress[hidden] { display: none !important; }
+.btn:disabled { opacity: .55; cursor: progress; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 
 <div class="wrap">
   <header>
     <h1>Tu imagen dentro de un código QR</h1>
-    <p class="lede">Elige qué hace el código: abrir una página, conectarse al wifi, guardar un contacto y más. Luego elige una imagen. La página crea un código QR que muestra tu imagen y que el teléfono puede seguir escaneando.</p>
+    <p class="lede">Elige qué hace el código: abrir una página, conectarse al wifi, guardar un contacto y más. Luego elige una imagen o un video. La página crea un código QR que muestra tu imagen, o un GIF animado con tu video, y que el teléfono puede seguir escaneando.</p>
   </header>
 
-  <form class="app" id="controls" autocomplete="off">
+  <form class="app" id="controls" autocomplete="off" data-mode="image">
     <section class="card text-area" aria-labelledby="s1">
       <h2 class="step" id="s1"><span class="n">1</span>¿Qué hace el código?</h2>
       <div class="types" id="types" role="radiogroup" aria-label="Tipo de código"></div>
@@ -204,8 +214,12 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     </section>
 
     <section class="card image-area" id="imageCard" aria-labelledby="s2">
-      <h2 class="step" id="s2"><span class="n">2</span>Elige la imagen</h2>
-      <div class="pick">
+      <h2 class="step" id="s2"><span class="n">2</span>Elige la imagen o el video</h2>
+      <div class="seg two" role="radiogroup" aria-label="Imagen o video">
+        <input type="radio" name="mode" id="modeImage" value="image" checked><label for="modeImage">Imagen<small>código fijo (PNG)</small></label>
+        <input type="radio" name="mode" id="modeVideo" value="video"><label for="modeVideo">Video<small>código animado (GIF)</small></label>
+      </div>
+      <div class="pick img-only">
         <button type="button" class="btn primary touch-only" id="btnCamera">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
           Tomar foto
@@ -215,24 +229,45 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
           Cargar imagen
         </button>
       </div>
+      <div class="pick vid-only">
+        <button type="button" class="btn primary touch-only" id="btnVidCamera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg>
+          Grabar video
+        </button>
+        <button type="button" class="btn" id="btnVidUpload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>
+          Cargar video
+        </button>
+      </div>
+      <input type="file" id="fileVidCamera" accept="video/*" capture="environment" class="sr" tabindex="-1" aria-hidden="true">
+      <input type="file" id="fileVidUpload" accept="video/*" class="sr" tabindex="-1" aria-hidden="true">
       <input type="file" id="fileCamera" accept="image/*" capture="environment" class="sr" tabindex="-1" aria-hidden="true">
       <input type="file" id="fileUpload" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
       <div class="current">
         <canvas id="thumb" width="112" height="112" aria-hidden="true"></canvas>
         <p><b id="imgName">Imagen de ejemplo</b><span id="imgNote">Funciona mejor con un solo objeto al centro y buen contraste.</span></p>
       </div>
-      <p class="hint desk-only">También puedes arrastrar una imagen a este recuadro o pegarla con Ctrl+V (⌘+V en Mac).</p>
-      <div><button type="button" class="linkbtn" id="btnSample">Usar la imagen de ejemplo</button></div>
+      <p class="hint desk-only img-only">También puedes arrastrar una imagen a este recuadro o pegarla con Ctrl+V (⌘+V en Mac).</p>
+      <p class="hint vid-only">Usa un clip corto, con movimiento lento y buen contraste. El GIF dura máximo 6 segundos.</p>
+      <div class="img-only"><button type="button" class="linkbtn" id="btnSample">Usar la imagen de ejemplo</button></div>
+      <div class="vid-only"><button type="button" class="linkbtn" id="btnVidSample">Usar el video de ejemplo</button></div>
     </section>
 
     <section class="card result" id="resultCard" aria-labelledby="s3">
       <h2 class="step" id="s3"><span class="n">3</span>Tu código</h2>
-      <img id="out" alt="Código QR con tu imagen">
+      <img id="out" class="img-only" alt="Código QR con tu imagen">
+      <canvas id="outVid" class="vid-only" aria-label="Vista previa del código animado"></canvas>
+      <img id="gifOut" class="vid-only" alt="Código QR animado en GIF" hidden>
+      <div class="vid-actions vid-only">
+        <button type="button" class="btn primary" id="btnGif">Crear GIF</button>
+        <div class="progress" id="prog" hidden><div id="progBar"></div></div>
+        <p class="hint" id="progTxt">Esta es una vista previa. Crea el GIF para revisar cada cuadro y descargarlo.</p>
+      </div>
       <div id="verdict" class="verdict ok" role="status" aria-live="polite"></div>
       <div class="save-row">
         <button type="button" class="btn primary" id="btnSave" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
-          Descargar imagen (PNG)
+          <span id="saveLabel">Descargar imagen (PNG)</span>
         </button>
         <p class="hint" id="saveHint">Para guardarla, mantén presionado el código (en el teléfono) o haz clic derecho y elige “Guardar imagen”.</p>
         <p class="hint" id="saveMsg" role="status"></p>
@@ -243,6 +278,47 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     <section class="card settings" aria-labelledby="s4">
       <h2 class="step" id="s4"><span class="n">4</span>Ajusta el resultado</h2>
       <p class="hint">Cada cambio se ve al instante en el código. Si el aviso se pone rojo, deshaz el último cambio.</p>
+
+      <div class="group vid-only">
+        <h3>El video</h3>
+        <div class="ctl">
+          <div class="ctl-head"><label for="vStart">Inicio del clip</label><output id="vStartOut" for="vStart"></output></div>
+          <input type="range" id="vStart" min="0" max="3.5" step="0.1" value="0">
+          <p class="hint">El segundo del video donde empieza el GIF.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><label for="vDur">Duración</label><output id="vDurOut" for="vDur"></output></div>
+          <input type="range" id="vDur" min="1" max="4" step="0.5" value="3">
+          <div class="ends" aria-hidden="true"><span>Más corto</span><span>Más largo</span></div>
+          <p class="hint">Cuánto dura el GIF antes de repetirse. Más duración hace un archivo más pesado.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><span class="lbl" id="fpsLbl">Cuadros por segundo</span><output id="fpsOut"></output></div>
+          <div class="seg" role="radiogroup" aria-labelledby="fpsLbl">
+            <input type="radio" name="fps" id="fps8" value="8"><label for="fps8">8</label>
+            <input type="radio" name="fps" id="fps10" value="10" checked><label for="fps10">10</label>
+            <input type="radio" name="fps" id="fps12" value="12"><label for="fps12">12</label>
+            <input type="radio" name="fps" id="fps15" value="15"><label for="fps15">15</label>
+          </div>
+          <p class="hint">Cuántas imágenes muestra el GIF cada segundo. Más cuadros dan un movimiento más suave, pero el archivo pesa más.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><span class="lbl" id="dmodeLbl">Tipo de trama</span><output id="dmodeOut"></output></div>
+          <div class="seg two" role="radiogroup" aria-labelledby="dmodeLbl">
+            <input type="radio" name="dmode" id="dmFixed" value="fixed" checked><label for="dmFixed">Fija<small>no tiembla</small></label>
+            <input type="radio" name="dmode" id="dmDiff" value="diff"><label for="dmDiff">Difusa<small>más detalle</small></label>
+          </div>
+          <p class="hint">La trama fija deja los puntos quietos donde la imagen no cambia. La difusa muestra más detalle, pero los puntos tiemblan de un cuadro a otro.</p>
+        </div>
+        <div class="ctl">
+          <div class="ctl-head"><span class="lbl" id="gsizeLbl">Tamaño del GIF</span><output id="gsizeOut"></output></div>
+          <div class="seg two" role="radiogroup" aria-labelledby="gsizeLbl">
+            <input type="radio" name="gsize" id="gs3" value="3" checked><label for="gs3">Normal</label>
+            <input type="radio" name="gsize" id="gs4" value="4"><label for="gs4">Grande</label>
+          </div>
+          <p class="hint">Grande se ve mejor en pantallas grandes, pero el archivo pesa casi el doble.</p>
+        </div>
+      </div>
 
       <div class="group">
         <h3>La imagen</h3>
@@ -307,6 +383,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
           <input type="range" id="flip" min="0" max="15" step="1" value="0">
           <div class="ends" aria-hidden="true"><span>Más seguro</span><span>Más imagen</span></div>
           <p class="hint">Con 0 %, ningún dato del código cambia. Con más de 0 %, ese porcentaje de cuadros muestra la imagen en lugar del dato, y la protección contra daños los repara. Si lo subes mucho, el código deja de leerse.</p>
+          <p class="hint vid-only">En video, los cuadros cedidos se eligen con el primer cuadro del clip y no cambian durante el GIF.</p>
         </div>
       </div>
       <div><button type="button" class="btn" id="btnReset">Volver a los ajustes iniciales</button></div>
@@ -321,6 +398,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
         <p>Esta página divide cada cuadro en 9 puntos. El punto del centro guarda el dato del código. Los 8 puntos de alrededor dibujan tu imagen con una trama de puntos, como la de un periódico.</p>
         <p>Los 3 cuadros grandes de las esquinas y los cuadros pequeños de guía no cambian. El teléfono los usa para ubicar el código.</p>
         <p>La página prueba cada código con un lector de QR, nítido y un poco borroso, como lo ve una cámara. Esa prueba no reemplaza a un teléfono real: escanea el código antes de imprimirlo.</p>
+        <p>En modo video, cada cuadro del GIF es un código con los mismos datos. Los puntos centrales no cambian; solo se mueven los de alrededor. Por eso el teléfono puede leer cualquier cuadro.</p>
         <p>Tu imagen no sale de tu equipo. Todo pasa en tu navegador.</p>
         <p>La técnica es de Chu y otros, publicada en 2013 (<a href="https://doi.org/10.1145/2508363.2508408" target="_blank" rel="noopener">artículo</a>). La conocimos por <a href="https://hackaday.com/2026/11/06/using-halftone-images-in-qr-codes-without-upsetting-scanners/" target="_blank" rel="noopener">Hackaday (2026-11-06)</a>.</p>
       </div>
@@ -362,7 +440,9 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
   // ---------- Imagen ----------
   let srcCanvas = document.createElement('canvas');
-  function drawSample() {
+  const SAMPLE_DUR = 4;
+  function drawSample(ph = 0) {
+    const TAU = Math.PI * 2;
     const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
     const g = c.getContext('2d');
     const bg = g.createLinearGradient(0, 0, 0, S); bg.addColorStop(0, '#f2f2f2'); bg.addColorStop(1, '#6a6a6a');
@@ -371,19 +451,19 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     const sh = g.createRadialGradient(0, 0, 0, 0, 0, S*.36); sh.addColorStop(0, 'rgba(0,0,0,.75)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = sh; g.beginPath(); g.arc(0, 0, S*.36, 0, Math.PI*2); g.fill(); g.restore();
     const ring = front => {
-      g.save(); g.translate(S*.5, S*.47); g.rotate(-0.32); g.scale(1, .28);
+      g.save(); g.translate(S*.5, S*.47); g.rotate(-0.32 + 0.12 * Math.sin(TAU * ph)); g.scale(1, .28);
       const a0 = front ? 0 : Math.PI, a1 = front ? Math.PI : Math.PI*2;
       g.lineWidth = 34; g.strokeStyle = '#2b2b2b'; g.beginPath(); g.arc(0, 0, S*.41, a0, a1); g.stroke();
       g.lineWidth = 10; g.strokeStyle = '#bdbdbd'; g.beginPath(); g.arc(0, 0, S*.41, a0, a1); g.stroke();
       g.restore();
     };
     ring(false);
-    const sp = g.createRadialGradient(S*.38, S*.33, S*.02, S*.5, S*.47, S*.27);
+    const sp = g.createRadialGradient(S*(.38 + .1 * Math.sin(TAU * ph)), S*(.27 + .06 * Math.cos(TAU * ph)), S*.02, S*.5, S*.47, S*.27);
     sp.addColorStop(0, '#ffffff'); sp.addColorStop(.35, '#b9b9b9'); sp.addColorStop(.8, '#3a3a3a'); sp.addColorStop(1, '#141414');
     g.fillStyle = sp; g.beginPath(); g.arc(S*.5, S*.47, S*.27, 0, Math.PI*2); g.fill();
     ring(true);
     g.fillStyle = '#ffffff';
-    [[.12,.12,5],[.84,.16,7],[.9,.42,4],[.1,.5,4],[.2,.28,3],[.78,.08,3]].forEach(([x,y,r]) => { g.beginPath(); g.arc(S*x, S*y, r, 0, Math.PI*2); g.fill(); });
+    [[.12,.12,5],[.84,.16,7],[.9,.42,4],[.1,.5,4],[.2,.28,3],[.78,.08,3]].forEach(([x,y,r], i) => { const k = 1 + .45 * Math.sin(TAU * ph * 2) * Math.sin(i + 1); g.beginPath(); g.arc(S*x, S*y, r * k, 0, Math.PI*2); g.fill(); });
     return c;
   }
   function setSource(img, name, note) {
@@ -392,16 +472,16 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
     g.drawImage(img, 0, 0, c.width, c.height);
     srcCanvas = c;
-    $('imgName').textContent = name; $('imgNote').textContent = note;
+    imageInfo = { name, note }; showInfo();
     schedule();
   }
   // Dibuja la imagen en un cuadrado de lado S, con el zoom y la posición elegidos.
-  function drawFramed(g, S, st) {
-    const iw = srcCanvas.width, ih = srcCanvas.height;
+  function drawFramed(g, S, st, src = srcCanvas) {
+    const iw = src.width, ih = src.height;
     const sc = S / Math.min(iw, ih) * st.zoom / 100, dw = iw * sc, dh = ih * sc;
     const rx = Math.max(Math.abs(dw - S) / 2, S * 0.25), ry = Math.max(Math.abs(dh - S) / 2, S * 0.25);
     g.fillStyle = '#fff'; g.fillRect(0, 0, S, S);
-    g.drawImage(srcCanvas, (S - dw) / 2 + st.posX / 100 * rx, (S - dh) / 2 + st.posY / 100 * ry, dw, dh);
+    g.drawImage(src, (S - dw) / 2 + st.posX / 100 * rx, (S - dh) / 2 + st.posY / 100 * ry, dw, dh);
   }
   function loadFile(f) {
     if (!f) return;
@@ -436,10 +516,10 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     if (v >= 7) for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) { mark(i, N - 11 + j); mark(N - 11 + j, i); }
     return f;
   }
-  function luminance(W, bright, contrast, gamma, st) {
+  function luminance(W, bright, contrast, gamma, st, src) {
     const c = document.createElement('canvas'); c.width = c.height = W;
     const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
-    drawFramed(g, W, st);
+    drawFramed(g, W, st, src);
     const d = g.getImageData(0, 0, W, W).data, L = new Float32Array(W * W);
     for (let i = 0; i < W * W; i++) {
       let y = (0.2126 * d[i*4] + 0.7152 * d[i*4+1] + 0.0722 * d[i*4+2]) / 255;
@@ -466,7 +546,21 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     }
     return out;
   }
-  function paint(pix, W, scale) {
+  // Trama ordenada (Bayer 8×8): los puntos no tiemblan entre cuadros. El error de cada centro forzado se reparte entre sus 8 vecinos.
+  const BAYER = Float32Array.from([0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21], v => (v + .5) / 64);
+  function ditherOrdered(L, W, fixed, pass) {
+    const buf = Float32Array.from(L), out = new Uint8Array(W * W);
+    for (let i = 0; i < W * W; i++) if (pass[i]) {
+      const e = (L[i] - fixed[i]) / 8, x = i % W, y = (i / W) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) buf[(y + dy) * W + x + dx] += e;
+    }
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, f = fixed[i];
+      out[i] = f >= 0 ? f : (buf[i] > BAYER[(y & 7) * 8 + (x & 7)] ? 1 : 0);
+    }
+    return out;
+  }
+  function paint(pix, W, scale, target) {
     const T = W + QUIET * SUB * 2;
     const small = document.createElement('canvas'); small.width = small.height = T;
     const g = small.getContext('2d'), id = g.createImageData(T, T), d = id.data;
@@ -477,7 +571,7 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       d[o] = d[o+1] = d[o+2] = 0;
     }
     g.putImageData(id, 0, 0);
-    const c = document.createElement('canvas'); c.width = c.height = T * scale;
+    const c = target || document.createElement('canvas'); c.width = c.height = T * scale;
     const cg = c.getContext('2d'); cg.imageSmoothingEnabled = false; cg.drawImage(small, 0, 0, T * scale, T * scale);
     return c;
   }
@@ -622,6 +716,10 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       bright: +$('bright').value, contrast: +$('contrast').value, mid: +$('mid').value,
       ecc: document.querySelector('input[name="ecc"]:checked').value,
       minVer: +$('minVer').value, flip: +$('flip').value,
+      vStart: +$('vStart').value, vDur: +$('vDur').value,
+      fps: +document.querySelector('input[name="fps"]:checked').value,
+      dmode: document.querySelector('input[name="dmode"]:checked').value,
+      gsize: +document.querySelector('input[name="gsize"]:checked').value,
     };
   }
   function labels(st) {
@@ -632,10 +730,16 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     $('contrastOut').textContent = st.contrast + ' %' + (st.contrast === 100 ? ' · original' : '');
     $('midOut').textContent = signed(st.mid, 'más claros', 'más oscuros');
     $('eccOut').textContent = `${ECC_NAME[st.ecc]} · ${ECC_PCT[st.ecc]} %`;
+    const sec = n => n.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' s';
+    $('vStartOut').textContent = `${sec(st.vStart)} de ${sec(videoSrc.duration)}`;
+    $('vDurOut').textContent = `${sec(st.vDur)} · ${Math.max(1, Math.round(st.vDur * st.fps))} cuadros`;
+    $('fpsOut').textContent = `${st.fps} por segundo`;
+    $('dmodeOut').textContent = st.dmode === 'fixed' ? 'Fija' : 'Difusa';
   }
 
   // ---------- Resultado ----------
-  let saveCanvas = null;
+  let saveCanvas = null, gifBlob = null, gifUrl = null, canDownload = false;
+  let mode = 'image';
   function setVerdict(kind, title, detail) {
     const v = $('verdict'); v.className = 'verdict ' + kind;
     v.innerHTML = '<span class="icon" aria-hidden="true"></span><div><p><strong></strong></p><p></p></div>';
@@ -649,63 +753,83 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     const ul = $('facts'); ul.replaceChildren();
     list.forEach(([k, val]) => { const li = document.createElement('li'); const b = document.createElement('b'); b.textContent = val; li.append(k + ': ', b); ul.append(li); });
   }
+  function updateSaveButton() {
+    const ready = mode === 'image' ? !!saveCanvas : !!gifBlob;
+    $('btnSave').hidden = !(canDownload && ready);
+    $('saveLabel').textContent = mode === 'image' ? 'Descargar imagen (PNG)' : 'Descargar GIF';
+  }
 
-  function render() {
-    const st = readState();
-    labels(st);
+  // ---------- Código: se calcula una vez y se reutiliza ----------
+  let codeCache = { key: '', ctx: null };
+  function prepare(st) {
     const built = buildPayload();
     st.text = built.payload || '';
     $('payload').textContent = st.text || '(vacío)';
     const chars = [...st.text].length;
     $('count').textContent = chars ? `El contenido tiene ${chars} caracteres. Entre más corto, más espacio queda para la imagen.` : '';
-
-    if (built.error) { setVerdict('bad', built.error, 'Complétalo en el paso 1 para crear el código.'); setFacts([]); return; }
-    const made = makeQR(st.text, st.ecc, st.minVer);
-    if (!made) { setVerdict('bad', 'El texto es demasiado largo para un código QR.', 'Acórtalo o baja la protección contra daños.'); setFacts([]); return; }
-    const { q, v } = made, N = q.getModuleCount(), W = N * SUB;
-    const askedN = 17 + 4 * st.minVer;
+    if (built.error) { setVerdict('bad', built.error, 'Complétalo en el paso 1 para crear el código.'); setFacts([]); return null; }
+    const key = [st.text, st.ecc, st.minVer].join('\u0000');
+    if (codeCache.key !== key) {
+      const made = makeQR(st.text, st.ecc, st.minVer);
+      if (!made) { codeCache = { key: '', ctx: null }; }
+      else {
+        const { q, v } = made, N = q.getModuleCount(), fmap = functionMap(v, N);
+        const dark = new Uint8Array(N * N);
+        let dataCount = 0;
+        for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { dark[r * N + c] = q.isDark(r, c) ? 1 : 0; if (!fmap[r * N + c]) dataCount++; }
+        codeCache = { key, ctx: { v, N, W: N * SUB, T: N * SUB + QUIET * SUB * 2, fmap, dark, dataCount, text: st.text } };
+      }
+    }
+    const ctx = codeCache.ctx;
+    if (!ctx) { setVerdict('bad', 'El texto es demasiado largo para un código QR.', 'Acórtalo o baja la protección contra daños.'); setFacts([]); return null; }
+    const askedN = 17 + 4 * st.minVer, N = ctx.N;
     $('verOut').textContent = `${askedN} × ${askedN} cuadros`;
-    $('verHint').textContent = v > st.minVer
+    $('verHint').textContent = ctx.v > st.minVer
       ? `Tu texto no cabe en ${askedN} × ${askedN} cuadros, así que el código usa ${N} × ${N}. Más cuadros dan más detalle a la imagen, pero el código debe imprimirse más grande.`
       : 'Es el número de cuadros del código. Más cuadros dan más detalle a la imagen, pero el código debe imprimirse más grande para que el teléfono lo lea.';
-
-    const fmap = functionMap(v, N);
-    const L = luminance(W, st.bright / 100, st.contrast / 100, Math.pow(2, -st.mid / 50), st);
-    { const t = $('thumb').getContext('2d'); t.imageSmoothingQuality = 'high'; drawFramed(t, 112, st); }
-
-    // Cuadros cedidos a la imagen: los que más chocan con ella.
-    let dataCount = 0;
-    for (let i = 0; i < N * N; i++) if (!fmap[i]) dataCount++;
-    const freed = new Uint8Array(N * N);
-    let freedCount = 0;
+    return ctx;
+  }
+  const lumOf = (ctx, st, src) => luminance(ctx.W, st.bright / 100, st.contrast / 100, Math.pow(2, -st.mid / 50), st, src);
+  // Cuadros cedidos a la imagen: los que más chocan con ella.
+  function freedFor(ctx, L, st) {
+    const { N, W, fmap, dark, dataCount } = ctx, freed = new Uint8Array(N * N);
+    let count = 0;
     if (st.flip > 0) {
       const cand = [];
       for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
         if (fmap[r * N + c]) continue;
         let m = 0; for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) m += L[(r*3+dy) * W + c*3+dx];
-        const conflict = Math.abs(m / 9 - (q.isDark(r, c) ? 0 : 1));
+        const conflict = Math.abs(m / 9 - (dark[r * N + c] ? 0 : 1));
         if (conflict > 0.5) cand.push([conflict, r * N + c]);
       }
       cand.sort((a, b) => b[0] - a[0]);
-      freedCount = Math.min(cand.length, Math.round(dataCount * st.flip / 100));
-      for (let i = 0; i < freedCount; i++) freed[cand[i][1]] = 1;
+      count = Math.min(cand.length, Math.round(dataCount * st.flip / 100));
+      for (let i = 0; i < count; i++) freed[cand[i][1]] = 1;
     }
-    $('flipOut').textContent = st.flip === 0 ? '0 % · apagada' : `${st.flip} % · ${freedCount.toLocaleString('es-CO')} de ${dataCount.toLocaleString('es-CO')} cuadros`;
-
-    const fixed = new Int8Array(W * W).fill(-1), pass = new Uint8Array(W * W);
+    $('flipOut').textContent = st.flip === 0 ? '0 % · apagada' : `${st.flip} % · ${count.toLocaleString('es-CO')} de ${dataCount.toLocaleString('es-CO')} cuadros`;
+    return freed;
+  }
+  function fixedFor(ctx, freed) {
+    const { N, W, fmap, dark } = ctx, fixed = new Int8Array(W * W).fill(-1), pass = new Uint8Array(W * W);
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
-      const val = q.isDark(r, c) ? 0 : 1, mi = r * N + c;
+      const mi = r * N + c, val = dark[mi] ? 0 : 1;
       if (fmap[mi]) { for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) fixed[(r*3+dy) * W + c*3+dx] = val; }
       else if (!freed[mi]) { const ci = (r*3+1) * W + c*3+1; fixed[ci] = val; pass[ci] = 1; }
     }
-    const pix = dither(L, W, fixed, pass);
-    const T = W + QUIET * SUB * 2;
+    return { fixed, pass };
+  }
 
+  // ---------- Modo imagen ----------
+  function renderImage(st, ctx) {
+    const { W, T, N } = ctx;
+    const L = lumOf(ctx, st, srcCanvas);
+    { const t = $('thumb').getContext('2d'); t.imageSmoothingQuality = 'high'; drawFramed(t, 112, st, srcCanvas); }
+    const { fixed, pass } = fixedFor(ctx, freedFor(ctx, L, st));
+    const pix = dither(L, W, fixed, pass);
     const big = paint(pix, W, Math.max(3, Math.ceil(1800 / T)));
     saveCanvas = big;
     const url = big.toDataURL('image/png');
     $('out').src = url; $('miniImg').src = url;
-
     const tScale = Math.max(2, Math.floor(1000 / T));
     const test = paint(pix, W, tScale);
     const sharp = verify(test, 0), soft = verify(test, Math.max(1, tScale * 0.3));
@@ -713,12 +837,234 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     else if (sharp === st.text && soft === st.text) setVerdict('ok', 'El código se puede escanear.', 'Lo probamos nítido y un poco borroso, como lo ve una cámara. Antes de imprimirlo, escanéalo con tu teléfono.');
     else if (sharp === st.text) setVerdict('warn', 'Se lee solo si la imagen está muy nítida.', 'Para que sea más seguro, baja la prioridad a la imagen, sube la protección contra daños o sube el contraste.');
     else setVerdict('bad', 'El código no se puede escanear.', st.flip > 0 ? 'Baja la prioridad a la imagen a 0 % o sube la protección contra daños.' : 'Sube la protección contra daños o el contraste. Si sigue igual, prueba con otra imagen.');
-
     setFacts([['Tamaño', `${N} × ${N} cuadros`], ['Protección', `${ECC_NAME[st.ecc]} (${ECC_PCT[st.ecc]} %)`], ['Imagen', `${big.width} × ${big.width} píxeles`]]);
+    updateSaveButton();
+  }
+
+  // ---------- Modo video ----------
+  const SAMPLE_VIDEO = { kind: 'sample', duration: SAMPLE_DUR, name: 'Video de ejemplo', note: 'Un planeta con luz que gira. Carga o graba tu propio video.' };
+  let videoSrc = SAMPLE_VIDEO, videoUrl = null;
+  let pv = null, pvRaf = 0, vidToken = 0, generating = false;
+  const liveCanvas = document.createElement('canvas');
+  const fmtSize = b => b >= 1048576 ? (b / 1048576).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' MB' : Math.round(b / 1024).toLocaleString('es-CO') + ' KB';
+
+  function seek(el, t) {
+    return new Promise(res => {
+      let done = false;
+      const fin = () => { if (done) return; done = true; el.removeEventListener('seeked', fin); res(); };
+      el.addEventListener('seeked', fin);
+      setTimeout(fin, 3000);
+      el.currentTime = Math.min(Math.max(0, t), Math.max(0, el.duration - 0.05));
+    });
+  }
+  function videoToCanvas(el, c) {
+    const k = Math.min(1, 720 / Math.max(el.videoWidth, el.videoHeight));
+    const w = Math.max(1, Math.round(el.videoWidth * k)), h = Math.max(1, Math.round(el.videoHeight * k));
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    c.getContext('2d').drawImage(el, 0, 0, w, h);
+    return c;
+  }
+  async function grabFrame(src, t) {
+    if (src.kind === 'sample') return drawSample((t % SAMPLE_DUR) / SAMPLE_DUR);
+    await seek(src.el, t);
+    return videoToCanvas(src.el, document.createElement('canvas'));
+  }
+  const ditherFor = st => st.dmode === 'fixed' ? ditherOrdered : dither;
+
+  function stopPreview() {
+    cancelAnimationFrame(pvRaf); pvRaf = 0;
+    if (videoSrc.kind === 'file') videoSrc.el.pause();
+  }
+  function invalidateGif() {
+    if (gifUrl) URL.revokeObjectURL(gifUrl);
+    gifBlob = null; gifUrl = null;
+    $('gifOut').hidden = true; $('gifOut').removeAttribute('src');
+    $('outVid').hidden = false;
+    $('prog').hidden = true;
+    $('progTxt').textContent = 'Esta es una vista previa. Crea el GIF para revisar cada cuadro y descargarlo.';
+    updateSaveButton();
+  }
+  function clipFrames(st) { return Math.max(1, Math.round(st.vDur * st.fps)); }
+  function videoFacts(ctx, st, extra = []) {
+    const px = ctx.T * st.gsize;
+    $('gsizeOut').textContent = `${px} × ${px} px`;
+    setFacts([['Tamaño', `${ctx.N} × ${ctx.N} cuadros`], ['Clip', `${clipFrames(st)} cuadros en ${st.vDur.toLocaleString('es-CO')} s`], ['GIF', `${px} × ${px} píxeles`], ...extra]);
+  }
+
+  async function restartVideo(st, ctx) {
+    const token = ++vidToken;
+    stopPreview(); invalidateGif();
+    videoFacts(ctx, st);
+    const ref = await grabFrame(videoSrc, st.vStart);
+    if (token !== vidToken || mode !== 'video') return;
+    const L = lumOf(ctx, st, ref);
+    { const t = $('thumb').getContext('2d'); t.imageSmoothingQuality = 'high'; drawFramed(t, 112, st, ref); }
+    const { fixed, pass } = fixedFor(ctx, freedFor(ctx, L, st));
+    pv = { st, ctx, fixed, pass, token, t0: performance.now(), last: -1, lastCheck: 0 };
+    if (videoSrc.kind === 'file') { videoSrc.el.currentTime = st.vStart; videoSrc.el.play().catch(() => {}); }
+    pvRaf = requestAnimationFrame(tick);
+  }
+  function tick(now) {
+    if (!pv || pv.token !== vidToken || mode !== 'video' || generating) return;
+    pvRaf = requestAnimationFrame(tick);
+    if (document.hidden) return;
+    const { st, ctx, fixed, pass } = pv;
+    const frameNo = Math.floor((now - pv.t0) / 1000 * st.fps);
+    if (frameNo === pv.last) return;
+    pv.last = frameNo;
+    let frame;
+    if (videoSrc.kind === 'sample') {
+      frame = drawSample((((st.vStart + (frameNo / st.fps) % st.vDur)) % SAMPLE_DUR) / SAMPLE_DUR);
+    } else {
+      const el = videoSrc.el;
+      if (el.currentTime >= st.vStart + st.vDur || el.currentTime < st.vStart - 0.2 || el.ended) { el.currentTime = st.vStart; el.play().catch(() => {}); }
+      if (el.readyState < 2) return;
+      frame = videoToCanvas(el, liveCanvas);
+    }
+    const pix = ditherFor(st)(lumOf(ctx, st, frame), ctx.W, fixed, pass);
+    paint(pix, ctx.W, 2, $('outVid'));
+    if (now - pv.lastCheck > 1200) {
+      pv.lastCheck = now;
+      const res = verify(paint(pix, ctx.W, 2), 0);
+      if (res === undefined) setVerdict('warn', 'No pudimos probar el código en esta página.', 'Escanéalo con tu teléfono antes de usarlo.');
+      else if (res === ctx.text) setVerdict('ok', 'La vista previa se lee.', 'Crea el GIF para probar todos los cuadros, también un poco borrosos.');
+      else setVerdict('bad', 'Este cuadro de la vista previa no se lee.', 'Sube el contraste o la protección contra daños, o usa la trama fija.');
+      try { $('miniImg').src = $('outVid').toDataURL('image/png'); } catch (e) { /* sin miniatura */ }
+    }
+  }
+
+  // ---------- GIF (2 colores, LZW propio) ----------
+  const u16 = n => [n & 255, (n >> 8) & 255];
+  function gifHeader(w, h) {
+    const sig = [...'GIF89a'].map(c => c.charCodeAt(0)), ns = [...'NETSCAPE2.0'].map(c => c.charCodeAt(0));
+    return new Uint8Array([...sig, ...u16(w), ...u16(h), 0x91, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0,
+      0x21, 0xFF, 0x0B, ...ns, 3, 1, 0, 0, 0]);
+  }
+  function lzw(idx) {
+    const minCode = 2, clear = 4, eoi = 5, out = [];
+    let codeSize = 3, next = 6, dict = new Map(), cur = 0, bits = 0;
+    const emit = code => { cur |= code << bits; bits += codeSize; while (bits >= 8) { out.push(cur & 255); cur >>>= 8; bits -= 8; } };
+    emit(clear);
+    let prefix = idx[0];
+    for (let i = 1; i < idx.length; i++) {
+      const k = idx[i], key = (prefix << 2) | k, hit = dict.get(key);
+      if (hit !== undefined) { prefix = hit; continue; }
+      emit(prefix);
+      if (next === 4096) { emit(clear); dict = new Map(); next = 6; codeSize = minCode + 1; }
+      else { if (next >= (1 << codeSize)) codeSize++; dict.set(key, next++); }
+      prefix = k;
+    }
+    emit(prefix); emit(eoi);
+    if (bits > 0) out.push(cur & 255);
+    return out;
+  }
+  function gifFrame(idx, w, h, delayCs) {
+    const data = lzw(idx), blocks = [];
+    for (let i = 0; i < data.length; i += 255) { const n = Math.min(255, data.length - i); blocks.push(n); for (let j = 0; j < n; j++) blocks.push(data[i + j]); }
+    return new Uint8Array([0x21, 0xF9, 4, 0x04, ...u16(delayCs), 0, 0, 0x2C, 0, 0, 0, 0, ...u16(w), ...u16(h), 0, 2, ...blocks, 0]);
+  }
+  function frameIndices(pix, ctx, scale) {
+    const { W, T } = ctx, P = T * scale, q = QUIET * SUB, idx = new Uint8Array(P * P).fill(1), row = new Uint8Array(P);
+    for (let y = 0; y < W; y++) {
+      row.fill(1);
+      for (let x = 0; x < W; x++) if (!pix[y * W + x]) row.fill(0, (x + q) * scale, (x + q + 1) * scale);
+      for (let s = 0; s < scale; s++) idx.set(row, ((y + q) * scale + s) * P);
+    }
+    return idx;
+  }
+  async function createGif() {
+    if (!pv || generating) return;
+    const { st, ctx, fixed, pass } = pv, token = vidToken;
+    generating = true; stopPreview();
+    const n = clipFrames(st), P = ctx.T * st.gsize, delay = Math.max(2, Math.round(100 / st.fps));
+    const parts = [gifHeader(P, P)];
+    let okSharp = 0, okSoft = 0;
+    $('btnGif').disabled = true; $('btnGif').textContent = 'Creando GIF…'; $('prog').hidden = false;
+    try {
+      for (let i = 0; i < n; i++) {
+        const frame = await grabFrame(videoSrc, st.vStart + i / st.fps);
+        if (token !== vidToken) return;
+        const pix = ditherFor(st)(lumOf(ctx, st, frame), ctx.W, fixed, pass);
+        parts.push(gifFrame(frameIndices(pix, ctx, st.gsize), P, P, delay));
+        const test = paint(pix, ctx.W, 3);
+        const a = verify(test, 0), b = verify(test, 1);
+        if (a === ctx.text) okSharp++;
+        if (a === ctx.text && b === ctx.text) okSoft++;
+        if (i === 0) paint(pix, ctx.W, 2, $('outVid'));
+        $('progBar').style.width = `${Math.round((i + 1) / n * 100)}%`;
+        $('progTxt').textContent = `Creando y revisando el cuadro ${i + 1} de ${n}…`;
+        await new Promise(r => setTimeout(r, 0));
+      }
+      parts.push(new Uint8Array([0x3B]));
+      gifBlob = new Blob(parts, { type: 'image/gif' });
+      gifUrl = URL.createObjectURL(gifBlob);
+      $('gifOut').src = gifUrl; $('gifOut').hidden = false; $('outVid').hidden = true; $('miniImg').src = gifUrl;
+      $('prog').hidden = true;
+      $('progTxt').textContent = 'GIF listo. Si cambias un ajuste, vuelve a crearlo.';
+      if (okSoft === n) setVerdict('ok', `Se leen los ${n} cuadros.`, 'Los probamos nítidos y un poco borrosos. Antes de usarlo, escanéalo con tu teléfono desde la pantalla.');
+      else if (okSharp >= Math.ceil(n * 0.8)) setVerdict('warn', `Se leen ${okSharp} de ${n} cuadros.`, 'El teléfono necesita leer solo un cuadro, pero entre más se lean, más rápido escanea. Para mejorar, sube el contraste o la protección contra daños, o usa la trama fija.');
+      else setVerdict('bad', `Solo se leen ${okSharp} de ${n} cuadros.`, 'Sube el contraste o la protección contra daños, usa la trama fija o baja la prioridad a la imagen a 0 %.');
+      videoFacts(ctx, st, [['Archivo', fmtSize(gifBlob.size)]]);
+      updateSaveButton();
+    } finally {
+      generating = false;
+      $('btnGif').disabled = false; $('btnGif').textContent = 'Crear GIF';
+      if (token !== vidToken) schedule();
+    }
+  }
+
+  async function loadVideo(f) {
+    const url = URL.createObjectURL(f), el = document.createElement('video');
+    el.muted = true; el.playsInline = true; el.setAttribute('playsinline', ''); el.preload = 'auto'; el.src = url;
+    $('imgName').textContent = f.name || 'Video'; $('imgNote').textContent = 'Abriendo el video…';
+    try {
+      await new Promise((res, rej) => { el.onloadeddata = res; el.onerror = rej; setTimeout(() => rej(new Error('tiempo')), 15000); });
+      if (!isFinite(el.duration)) { await seek(el, 1e6); await seek(el, 0); }
+      const d = isFinite(el.duration) ? el.duration : 6;
+      if (videoSrc.kind === 'file') { videoSrc.el.pause(); }
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      videoUrl = url;
+      videoSrc = { kind: 'file', el, duration: d, name: f.name || 'Video', note: 'Elige el inicio y la duración en el paso 4.' };
+      setVideoRanges();
+      showInfo();
+      schedule();
+    } catch (e) {
+      URL.revokeObjectURL(url);
+      showInfo();
+      $('imgNote').textContent = 'Este navegador no pudo abrir ese video. Prueba con un video MP4.';
+    }
+  }
+  function setVideoRanges() {
+    const d = videoSrc.duration, vs = $('vStart'), vd = $('vDur');
+    vs.max = Math.max(0, Math.floor((d - 0.5) * 10) / 10);
+    if (+vs.value > +vs.max) vs.value = vs.max;
+    vd.max = Math.max(1, Math.min(6, Math.floor(d * 2) / 2));
+    if (+vd.value > +vd.max) vd.value = vd.max;
+  }
+  let imageInfo = { name: 'Imagen de ejemplo', note: SAMPLE_NOTE };
+  function showInfo() {
+    const info = mode === 'image' ? imageInfo : videoSrc;
+    $('imgName').textContent = info.name; $('imgNote').textContent = info.note;
+  }
+
+  // ---------- Render ----------
+  function render() {
+    const st = readState();
+    labels(st);
+    const ctx = prepare(st);
+    if (!ctx) { if (mode === 'video') { vidToken++; stopPreview(); invalidateGif(); } return; }
+    if (mode === 'image') renderImage(st, ctx);
+    else restartVideo(st, ctx);
   }
 
   let t = 0;
   function schedule() { clearTimeout(t); t = setTimeout(render, 110); }
+  function setMode(m) {
+    mode = m; $('controls').dataset.mode = m;
+    $('modeImage').checked = m === 'image'; $('modeVideo').checked = m === 'video';
+    if (m === 'image') { vidToken++; stopPreview(); }
+    showInfo(); updateSaveButton(); schedule();
+  }
 
   // ---------- Descarga ----------
   let downloads = null;
@@ -728,64 +1074,79 @@ summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
       const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = filename;
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); res({ status: 'saved' });
     }) };
-    $('btnSave').hidden = false;
+    canDownload = true;
     $('saveHint').textContent = 'También puedes hacer clic derecho sobre el código (o mantenerlo presionado en el teléfono) y elegir “Guardar imagen”.';
-  }
-  if (window.claude?.use) {
+  } else {
     window.claude.use('downloads').then(d => {
-      downloads = d;
-      if (d) { $('btnSave').hidden = false; $('saveHint').textContent = 'También puedes mantener presionado el código (en el teléfono) o hacer clic derecho y elegir “Guardar imagen”.'; }
+      downloads = d; canDownload = !!d;
+      if (d) $('saveHint').textContent = 'También puedes mantener presionado el código (en el teléfono) o hacer clic derecho y elegir “Guardar imagen”.';
+      updateSaveButton();
     }).catch(() => {});
   }
   $('btnSave').addEventListener('click', () => {
-    if (!downloads || !saveCanvas) return;
-    const msg = $('saveMsg'); msg.textContent = 'Preparando la imagen…';
-    saveCanvas.toBlob(blob => {
-      downloads.save({ filename: 'codigo-qr.png', data: blob })
-        .then(() => { msg.textContent = 'Listo. La imagen está en tus descargas.'; })
-        .catch(e => {
-          const code = e && e.code;
-          if (code === 'declined') msg.textContent = 'Cancelaste la descarga.';
-          else if (code === 'rate_limited') msg.textContent = 'Ya hay una descarga abierta. Ciérrala e inténtalo de nuevo.';
-          else { msg.textContent = 'Aquí no se puede descargar. Mantén presionado el código o haz clic derecho para guardarlo.'; $('btnSave').hidden = true; }
-        });
-    }, 'image/png');
+    if (!downloads) return;
+    const msg = $('saveMsg');
+    const send = (blob, filename) => downloads.save({ filename, data: blob })
+      .then(() => { msg.textContent = 'Listo. El archivo está en tus descargas.'; })
+      .catch(e => {
+        const code = e && e.code;
+        if (code === 'declined') msg.textContent = 'Cancelaste la descarga.';
+        else if (code === 'rate_limited') msg.textContent = 'Ya hay una descarga abierta. Ciérrala e inténtalo de nuevo.';
+        else { msg.textContent = 'Aquí no se puede descargar. Mantén presionado el código o haz clic derecho para guardarlo.'; canDownload = false; updateSaveButton(); }
+      });
+    if (mode === 'video') { if (gifBlob) { msg.textContent = 'Preparando el GIF…'; send(gifBlob, 'codigo-qr.gif'); } return; }
+    if (!saveCanvas) return;
+    msg.textContent = 'Preparando la imagen…';
+    saveCanvas.toBlob(blob => send(blob, 'codigo-qr.png'), 'image/png');
   });
 
   // ---------- Eventos ----------
-  $('controls').addEventListener('input', schedule);
-  $('controls').addEventListener('change', schedule);
+  function loadAny(f) {
+    if (!f) return;
+    if (f.type.startsWith('video/')) { if (mode !== 'video') setMode('video'); loadVideo(f); }
+    else { if (mode !== 'image') setMode('image'); loadFile(f); }
+  }
+  $('controls').addEventListener('input', e => { if (e.target.name !== 'mode') schedule(); });
+  $('controls').addEventListener('change', e => { if (e.target.name === 'mode') setMode(e.target.value); else schedule(); });
   $('controls').addEventListener('submit', e => e.preventDefault());
   $('btnCamera').addEventListener('click', () => $('fileCamera').click());
   $('btnUpload').addEventListener('click', () => $('fileUpload').click());
-  $('fileCamera').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
-  $('fileUpload').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+  $('btnVidCamera').addEventListener('click', () => $('fileVidCamera').click());
+  $('btnVidUpload').addEventListener('click', () => $('fileVidUpload').click());
+  ['fileCamera', 'fileUpload', 'fileVidCamera', 'fileVidUpload'].forEach(id => $(id).addEventListener('change', e => { loadAny(e.target.files[0]); e.target.value = ''; }));
   $('btnSample').addEventListener('click', () => setSource(drawSample(), 'Imagen de ejemplo', SAMPLE_NOTE));
+  $('btnVidSample').addEventListener('click', () => {
+    if (videoSrc.kind === 'file') videoSrc.el.pause();
+    videoSrc = SAMPLE_VIDEO; setVideoRanges(); showInfo(); schedule();
+  });
+  $('btnGif').addEventListener('click', createGif);
   $('btnReset').addEventListener('click', () => {
     $('zoom').value = DEFAULTS.zoom; $('posX').value = DEFAULTS.posX; $('posY').value = DEFAULTS.posY;
     $('bright').value = DEFAULTS.bright; $('contrast').value = DEFAULTS.contrast; $('mid').value = DEFAULTS.mid;
     $('ecc' + DEFAULTS.ecc).checked = true; $('minVer').value = DEFAULTS.minVer; $('flip').value = DEFAULTS.flip;
+    $('vStart').value = 0; $('vDur').value = Math.min(3, +$('vDur').max); $('fps10').checked = true; $('dmFixed').checked = true; $('gs3').checked = true;
     schedule();
   });
   $('btnCenter').addEventListener('click', () => { $('posX').value = 0; $('posY').value = 0; schedule(); });
   const card = $('imageCard');
   ['dragenter', 'dragover'].forEach(ev => card.addEventListener(ev, e => { e.preventDefault(); card.classList.add('drop-over'); }));
   ['dragleave', 'drop'].forEach(ev => card.addEventListener(ev, e => { e.preventDefault(); card.classList.remove('drop-over'); }));
-  card.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+  card.addEventListener('drop', e => loadAny(e.dataTransfer.files[0]));
   document.addEventListener('paste', e => {
-    const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
-    if (it) { e.preventDefault(); loadFile(it.getAsFile()); }
+    const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/') || i.type.startsWith('video/'));
+    if (it) { e.preventDefault(); loadAny(it.getAsFile()); }
   });
 
   // Vista previa flotante en móvil: aparece cuando estás en los ajustes y el código no está a la vista.
   if ('IntersectionObserver' in window) {
     let resultVisible = true, settingsVisible = false;
     const upd = () => { $('mini').hidden = resultVisible || !settingsVisible; };
-    new IntersectionObserver(es => { resultVisible = es[0].isIntersecting; upd(); }, { threshold: 0.15 }).observe($('out'));
+    new IntersectionObserver(es => { resultVisible = es[0].isIntersecting; upd(); }, { threshold: 0.25 }).observe($('resultCard'));
     new IntersectionObserver(es => { settingsVisible = es[0].isIntersecting; upd(); }).observe(document.querySelector('.settings'));
   }
   $('mini').addEventListener('click', () => $('resultCard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }));
 
+  setVideoRanges();
   setSource(drawSample(), 'Imagen de ejemplo', SAMPLE_NOTE);
 })();
 </script>

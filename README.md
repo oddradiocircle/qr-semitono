@@ -1,6 +1,6 @@
 # QR en semitono
 
-Página web que crea un código QR con una imagen dentro, dibujada con una trama de puntos. El código se sigue pudiendo escanear con el teléfono.
+Página web que crea un código QR con una imagen dentro, dibujada con una trama de puntos. También crea códigos QR animados en GIF a partir de un video. El código se sigue pudiendo escanear con el teléfono.
 
 **Úsala en línea:** <https://oddradiocircle.github.io/qr-semitono/>
 
@@ -8,9 +8,9 @@ Página web que crea un código QR con una imagen dentro, dibujada con una trama
 
 1. Abre la página en línea, o abre `index.html` en el navegador. No necesita instalación ni servidor.
 2. Elige qué hace el código: enlace, texto, WhatsApp, wifi, contacto, correo, llamada, SMS, ubicación o evento.
-3. Toma una foto o carga una imagen.
+3. Toma una foto o carga una imagen. Para un código animado, elige **Video** y graba o carga un video.
 4. Ajusta el resultado: zoom, posición, brillo, contraste, tonos medios, protección contra daños, detalle y prioridad a la imagen.
-5. Descarga el código en PNG con el botón "Descargar imagen (PNG)".
+5. Descarga el código en PNG. En modo video, toca "Crear GIF" y luego "Descargar GIF".
 
 La página prueba cada código con un lector de QR, nítido y un poco borroso. Esa prueba no reemplaza a un teléfono real: escanea el código antes de imprimirlo.
 
@@ -25,6 +25,20 @@ Un lector de QR mira solo el centro de cada cuadro del código. La página divid
 - Los cuadros de posición, alineación, tiempo y formato quedan sólidos, porque el lector los usa para ubicar el código.
 
 Con "Prioridad a la imagen" mayor que 0 %, algunos centros pasan a la imagen. La corrección de errores del QR repara esos datos. Con la imagen de ejemplo y protección máxima, el código se leyó hasta con 6 % (prueba en navegador automático, 2026-11-07).
+
+## Modo video
+
+Cada cuadro del GIF es un código QR con los mismos datos. Los puntos centrales no cambian; solo se mueven los de alrededor. Así el teléfono puede leer cualquier cuadro.
+
+- **Clip:** inicio, duración (máximo 6 segundos) y cuadros por segundo (8, 10, 12 o 15).
+- **Tipo de trama:** "Fija" usa una trama ordenada (Bayer 8×8) para que los puntos no tiemblen entre cuadros. "Difusa" usa Floyd–Steinberg: más detalle, pero los puntos tiemblan.
+- **Prioridad a la imagen:** los cuadros cedidos se eligen con el primer cuadro del clip y no cambian durante el GIF.
+- **Revisión:** al crear el GIF, la página prueba cada cuadro con el lector, nítido y un poco borroso, y dice cuántos se leen.
+- **Formato:** GIF de 2 colores. El codificador está escrito en la página; no usa librerías externas.
+
+Prueba en navegador automático (2026-11-22): con el video de ejemplo y con un MP4 de 5 segundos, se leyeron los 30 de 30 cuadros. Los GIF pesaron 424 KB y 376 KB (585 × 585 píxeles, 3 segundos, 10 cuadros por segundo).
+
+Riesgo conocido: Instagram, WhatsApp y otras apps vuelven a comprimir los videos y los GIF. Esa compresión puede borrar los puntos finos y dañar la lectura. Pruébalo después de subirlo.
 
 ## Dependencias
 
@@ -46,6 +60,8 @@ Las fuentes vienen de Google Fonts. Si no cargan, la página usa fuentes del sis
 ## Pendientes
 
 - Probar con teléfonos reales los tipos Wi-Fi, Contacto y Evento en iPhone y Android.
+- Escanear un GIF desde una pantalla con iPhone y Android.
+- Probar si el GIF se sigue leyendo después de subirlo a WhatsApp e Instagram.
 
 ## Licencia
 
