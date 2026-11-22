@@ -18,11 +18,21 @@ La imagen no sale del equipo. Todo pasa en el navegador.
 
 ## Cómo funciona
 
-Un lector de QR mira solo el centro de cada cuadro del código. La página divide cada cuadro en 9 puntos:
+Un lector de QR mira solo el centro de cada cuadro del código. La página divide cada cuadro en puntos:
 
-- El punto del centro guarda el dato del código.
-- Los 8 puntos de alrededor dibujan la imagen con difusión de error (Floyd–Steinberg).
+- Los puntos del centro guardan el dato del código.
+- Los puntos de alrededor dibujan la imagen con difusión de error (Floyd–Steinberg).
 - Los cuadros de posición, alineación, tiempo y formato quedan sólidos, porque el lector los usa para ubicar el código.
+
+"Facilidad de lectura" define cuántos puntos tiene cada cuadro y cuántos guardan el dato:
+
+| Opción | Puntos por cuadro | Puntos del centro | Parte del cuadro que guarda el dato |
+|---|---|---|---|
+| Más imagen | 3 × 3 | 1 | 11 % |
+| Equilibrada (inicial) | 4 × 4 | 2 × 2 | 25 % |
+| Más lectura | 5 × 5 | 3 × 3 | 36 % |
+
+Con un centro más grande, la cámara lee más fácil, pero la imagen pierde detalle.
 
 Con "Prioridad a la imagen" mayor que 0 %, algunos centros pasan a la imagen. La corrección de errores del QR repara esos datos. Con la imagen de ejemplo y protección máxima, el código se leyó hasta con 6 % (prueba en navegador automático, 2026-11-07).
 
@@ -31,12 +41,17 @@ Con "Prioridad a la imagen" mayor que 0 %, algunos centros pasan a la imagen. La
 Cada cuadro del GIF es un código QR con los mismos datos. Los puntos centrales no cambian; solo se mueven los de alrededor. Así el teléfono puede leer cualquier cuadro.
 
 - **Clip:** inicio, duración (máximo 6 segundos) y cuadros por segundo (8, 10, 12 o 15).
+- **Forma de repetir:**
+  - "Fundido" (inicial) mezcla el final con el inicio durante el primer 25 % del GIF, para que la vuelta no se note. Usa unos segundos extra del video después del clip; si no los hay, el GIF queda un poco más corto.
+  - "Ida y vuelta" reproduce el clip hacia adelante y luego hacia atrás. Dura y pesa casi el doble.
+  - "Corte" vuelve al inicio de golpe.
+- **Vista previa:** la página prepara los cuadros del clip una vez. La vista previa y el GIF usan los mismos cuadros, así que lo que ves es lo que descargas.
 - **Tipo de trama:** "Fija" usa una trama ordenada (Bayer 8×8) para que los puntos no tiemblen entre cuadros. "Difusa" usa Floyd–Steinberg: más detalle, pero los puntos tiemblan.
 - **Prioridad a la imagen:** los cuadros cedidos se eligen con el primer cuadro del clip y no cambian durante el GIF.
 - **Revisión:** al crear el GIF, la página prueba cada cuadro con el lector, nítido y un poco borroso, y dice cuántos se leen.
 - **Formato:** GIF de 2 colores. El codificador está escrito en la página; no usa librerías externas.
 
-Prueba en navegador automático (2026-11-22): con el video de ejemplo y con un MP4 de 5 segundos, se leyeron los 30 de 30 cuadros. Los GIF pesaron 424 KB y 376 KB (585 × 585 píxeles, 3 segundos, 10 cuadros por segundo).
+Prueba en navegador automático (2026-11-22, facilidad de lectura equilibrada, 3 segundos, 10 cuadros por segundo): con el video de ejemplo y con 2 videos MP4, se leyeron todos los cuadros con las 3 formas de repetir. Con un video de movimiento continuo, el salto al volver al inicio fue de 26,8 con "Corte", 2,3 con "Fundido" y 1,1 con "Ida y vuelta". El cambio normal entre cuadros seguidos fue de 1,8. La escala es la diferencia media de gris entre cuadros, de 0 a 255. Los GIF pesaron entre 371 y 471 KB, o entre 718 y 910 KB con "Ida y vuelta" (520 × 520 píxeles).
 
 Riesgo conocido: Instagram, WhatsApp y otras apps vuelven a comprimir los videos y los GIF. Esa compresión puede borrar los puntos finos y dañar la lectura. Pruébalo después de subirlo.
 
